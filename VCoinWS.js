@@ -629,11 +629,10 @@ class EntitiesClass {
     }
 }
 
-const Entit = new EntitiesClass(),
-    miner = new Miner();
+const Entit = new EntitiesClass();
 
 module.exports = {
     Entit,
     VCoinWS,
-    miner
+    Miner
 };
