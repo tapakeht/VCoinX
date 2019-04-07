@@ -146,7 +146,7 @@ class CoinBot {
             }
             let vk = new VK();
             vk.token = this.vk_token;
-            (async function inVKProc() {
+            (async _ => {
                 try {
                     let {
                         mobile_iframe_url
