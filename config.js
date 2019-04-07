@@ -1,7 +1,7 @@
 module.exports = {
 	BOTS: [
 	    {
-            VK_TOKEN: "token_here",
+            TOKEN: "token_here",
             DONEURL: "https://coin.vkforms.ru/index.html/0",
             TI: 1800, //интервал автоперевода
             TSUM: 10000, //сумма автоперевода
@@ -19,7 +19,7 @@ module.exports = {
             SHOW_BUY: true //показывать сообщения об автопокупке / умной покупке
         },
         {
-            VK_TOKEN: "token2_here",
+            TOKEN: "token2_here",
             DONEURL: "https://coin.vkforms.ru/index.html/1",
             TPERC: 75, //автоперевод в процентах
             TO: 654321, //ID для автоперевода

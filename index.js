@@ -39,8 +39,7 @@ let
     disableUpdates = false,
     updatesEv = false,
     updatesInterval = 60,
-    updatesLastTime = 0,
-    flog = false;
+    updatesLastTime = 0;
 
 onUpdates(msg => {
     if (!updatesEv && !disableUpdates)
@@ -99,7 +98,7 @@ let showStatus = setInterval(_ => {
             totalCoins += bots[i].getCoins();
             totalSpeed += bots[i].getSpeed();
         }
-        if (flog || bots[i].showStatus) {
+        if (bots[i].showStatus) {
             con(bots[i].status, "yellow");
         }
     }
@@ -266,117 +265,17 @@ for (var argn = 2; argn < process.argv.length; argn++) {
                 setColorsM(offColors = !offColors);
                 break;
             }
-/*
-        case '-t':
-            {
-                if (dTest.length > 80 && dTest.length < 90) {
-                    VK_TOKEN = dTest.toString();
-                    con("Успешно установлен токен: " + VK_TOKEN.toString() + ".", "blue");
-                    argn++;
-                }
-                break;
-            }
-*/
-/* l
-        case '-u':
-            {
-                if (dTest.length > 200 && dTest.length < 500) {
-                    con("Пользовательский URL был включен.", "blue");
-                    DONEURL = dTest;
-                    argn++;
-                }
-                break;
-            }
-*/
-/*
-        case '-to':
-            {
-                if (dTest.length > 1 && dTest.length < 11) {
-                    transferTo = parseInt(dTest.replace(/\D+/g, ""));
-                    con("Включен автоматический перевод коинов на @id" + transferTo);
-                    argn++;
-                }
-                break;
-            }
-*/
-/*
-        case '-autobuyitem':
-            {
-                if (typeof dTest == "string" && dTest.length > 1 && dTest.length < 20) {
-                    if (!Entit.titles[dTest]) return;
-                    con("Для автопокупки выбрано: " + Entit.titles[dTest]);
-                    autoBuyItem = dTest;
-                    argn++;
-                }
-                break;
-            }
-*/
-/*
-        case '-tforce':
-            {
-                con("Принудительное использование токена включено.");
-                tforce = true;
-                break;
-            }
-*/
-/*
-        case '-tsum':
-            {
-                if (dTest.length >= 1 && dTest.length < 10) {
-                    transferScore = parseInt(dTest);
-                    con("Установлено количество коинов для автоматического перевода: " + transferScore + " коинов.");
-                    argn++;
-                }
-                break;
-            }
-*/
-/*
-        case '-ti':
-            {
-                if (dTest.length >= 1 && dTest.length < 10) {
-                    transferInterval = parseInt(dTest);
-                    con("Установлен интервал для автоматического перевода: " + transferInterval + " секунд.");
-                    argn++;
-                }
-                break;
-            }
-*/
-/*
-        case '-autobuy':
-            {
-                autoBuy = true;
-                smartBuy = false;
-                break;
-            }
-*/
-/*
-        case '-smartbuy':
-            {
-                smartBuy = true;
-                autoBuy = false;
-                break;
-            }
-*/
+        
         case '-noupdates':
             ccon("Уведомления об обновлении скрыты. (*^.^*)");
             disableUpdates = true;
             break;
         
-        case '-flog':
-            flog = true;
-            break;
-        
         case '-h':
         case '-help':
             {
-                ccon("-- VCoinB arguments --", "red");
+                ccon("-- VCoinX arguments --", "red");
                 ccon("-help			- помощь.");
-                /*ccon("-tforce		- принудительно использовать токен.");
-                ccon("-tsum [sum]	- включить функцию для авто-перевода.");
-                ccon("-to [id]		- указать ID для авто-перевода.");
-                ccon("-ti [seconds]	- установить инетрвал для автоматического перевода.");
-                ccon("-u [URL]		- задать ссылку.");
-                ccon("-t [TOKEN]	- задать токен.");*/
                 ccon("-black      - отключить цвета консоли.");
                 ccon("-noupdates  - отключить сообщение об обновлениях.");
                 process.exit();

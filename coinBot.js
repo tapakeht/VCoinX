@@ -346,6 +346,7 @@ class CoinBot {
     }
     
     stop() {
+        this.xRestart = false;
         this.running = false;
         clearTimeout(this.tryStartTTL);
         clearTimeout(this.missTTL);
