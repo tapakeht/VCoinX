@@ -5,7 +5,8 @@ const url = require('url'),
     } = require('vk-io');
 
 const {
-	CoinBot
+	CoinBot,
+	State
 } = require('./coinBot');
 
 const {
@@ -93,13 +94,13 @@ let showStatus = setInterval(_ => {
 	    totalSpeed = 0,
         running = 0;
     for (let i = 0; i < bots.length; i++) {
-        if (bots[i].running){
+        if (bots[i].state == State.RUNNING){
             running++;
             totalCoins += bots[i].getCoins();
             totalSpeed += bots[i].getSpeed();
         }
         if (bots[i].showStatus) {
-            con(bots[i].status, "yellow");
+            bots[i].conStatus();
         }
     }
     con("Работает " + running + " ботов из " + bots.length, "cyan");
@@ -179,10 +180,8 @@ rl.on('line', async (line) => {
                 break;
     
             case "stop":
-                bots[selBot].stop();
-                break
             case "pause":
-                bots[selBot].pause();
+                bots[selBot].stop();
                 break;
     
             case "start":

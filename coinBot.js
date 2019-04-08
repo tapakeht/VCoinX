@@ -33,7 +33,7 @@ const NO_TOKEN = "Бот остановлен (отсутствует токен
     BRK_EVT = "Обнаружен brokenEvent, видимо сервер сломался.\n\t\tЧерез 10 секунд будет выполнен перезапуск.",
     SWITCH_SRV = "Достигнут лимит попыток подключиться к серверу.\n\t\t\tПроизводится смена сервера...",
     OTHER_DEVICE = "Обнаружено открытие приложения с другого устройства.\n\t\tЧерез 30 секунд будет выполнен перезапуск.",
-    USER_OFFLINE = "Пользователь отключен от сервера.\n\t\tЧерез 10 секунд будет выполнен перезапуск.",
+    USER_OFFLINE = "Пользователь отключен от сервера.\n\t\tЧерез 20 секунд будет выполнен перезапуск.",
     TRANSFER_OK = "Перевод был выполнен успешно.",
     BAD_ARGS = "Вероятно, вы где-то указали неверный аргумент.";
 
@@ -58,6 +58,15 @@ function formatWSS(link, user_id, server) {
     }
 }
 
+let State = {
+    STOPPED: 1,
+    LOADING: 2,
+    RESTARTING: 3,
+    RUNNING: 4,
+    
+    descr: ["???", "STOPPED", "LOADING", "RESTARTING", "RUNNING"]
+}
+
 class CoinBot {
     constructor(token, doneurl="", id=0, single=false) {
         this.vk_token = token;
@@ -73,7 +82,6 @@ class CoinBot {
         this.currentServer = 0;
         
         this.tryStartTTL = null;
-        this.xRestart = true;
         this.missCount = 0;
         this.missTTL = null;
         this.transferTo = 0;
@@ -87,15 +95,17 @@ class CoinBot {
         this.boosterTTL = null;
         this.lastTry = 0;
         this.numberOfTries = 3;
-        this.running = false;
-        this.status = "";
+        this.state = State.STARTING;
+        this.lastStatus = "";
         this.showStatus = false;
         this.showTransferIn = false;
         this.showTransferOut = false;
         this.showBuy = false;
         
         this.setupWS();
-        this.updateLink();
+        if (this.updateLink()) {
+            this.startBooster();
+        }
     }
     
     lPrices() {
@@ -114,6 +124,10 @@ class CoinBot {
     
     conId(message, color, colorBG) {
         con("[Bot #" + this.id + "] " + message, color, colorBG);
+    }
+    
+    conStatus() {
+        this.conId("(" + State.descr[this.state] + ") " + this.lastStatus, "yellow")
     }
     
     async infLogId(message) {
@@ -146,7 +160,7 @@ class CoinBot {
             }
             let vk = new VK();
             vk.token = this.vk_token;
-            (async _ => {
+            return (async _ => {
                 try {
                     let {
                         mobile_iframe_url
@@ -162,43 +176,44 @@ class CoinBot {
     
                     this.user_id = id;
                     this.URLWS = formatWSS(mobile_iframe_url, this.user_id, this.currentServer);
-                    this.startBooster();
+                    return true;
                 } catch (error) {
                     this.conId('API Error: ' + error, true);
                     this.stop();
+                    return false;
                 }
             })();
         } else {
             let gsearch = url.parse(this.doneurl, true);
             if (!gsearch.query || !gsearch.query.vk_user_id) {
                 this.conId(URL_NO_VK_ID, true);
-                return this.stop();
+                this.stop();
+                return false;
             }
             this.user_id = parseInt(gsearch.query.vk_user_id);
     
             this.URLWS = formatWSS(this.doneurl, this.user_id, this.currentServer);
-            this.startBooster();
+            return true;
         }
     }
     
-    async startBooster(tw=1e3) {
+    startBooster(tw=1e3) {
         clearTimeout(this.tryStartTTL);
         this.tryStartTTL = setTimeout(() => {
+            this.state = State.STARTING;
             this.conId(STARTING);
             this.coinWS.userId = this.user_id;
             this.coinWS.run(this.URLWS, _ => {
                 this.conId(STARTED);
-                this.xRestart = true;
             });
         }, tw);
     }
     
-    forceRestart(t, force) {
-        this.running = false;
-        this.coinWS.close();
-        clearInterval(this.boosterTTL);
-        if (this.xRestart || force)
-            this.startBooster(t);
+    forceRestart(t) {
+        this.stop();
+        this.lastStatus = "";
+        this.state = State.RESTARTING;
+        this.startBooster(t);
     }
     
     setupWS() {
@@ -281,7 +296,7 @@ class CoinBot {
                     }
                 }
                 let msg = "Позиция в топе: " + place + "\tКоличество коинов: " + formatScore(score, true);
-                this.status = "[Bot #" + this.id + "] " + msg;
+                this.lastStatus = msg;
                 this.conMisc(msg, "yellow");
             }
         });
@@ -294,7 +309,7 @@ class CoinBot {
         this.coinWS.onUserLoaded((place, score, items, top, firstTime, tick) => {
             this.logMisc(USER_LOADED);
             this.logMisc("Скорость: " + formatScore(tick, true) + " коинов / тик.");
-        
+            
             this.miner.setActive(items);
             this.miner.updateStack(items);
         
@@ -302,13 +317,12 @@ class CoinBot {
             this.boosterTTL = setInterval(_ => {
                 rand(0, 5) > 3 && this.coinWS.click();
             }, 5e2);
-            this.running = true;
+            this.lastStatus = "Позиция в топе: " + place + "\tКоличество коинов: " + formatScore(score, true);
+            this.state = State.RUNNING;
         });
         
         this.coinWS.onBrokenEvent(_ => {
             this.conId(BRK_EVT, true);
-            this.xRestart = false;
-        
             if (autobeep)
                 beep();
             
@@ -319,35 +333,40 @@ class CoinBot {
             this.conId(OTHER_DEVICE, true);
             if (autobeep)
                 beep();
-            this.forceRestart(3e4, true);
+            this.forceRestart(3e4);
         });
         
         this.coinWS.onOffline(_ => {
-            if (!this.xRestart) 
-                return;
-            this.conId(USER_OFFLINE, true);
-            if (autobeep)
-                beep();
-        
-            this.tryAgain(2e4);
+            if (this.state == State.RUNNING || this.state == State.STARTING) {
+                this.conId(USER_OFFLINE, true);
+                if (autobeep)
+                    beep();
+            
+                this.tryAgain(2e4);
+            }
         });
     }
     
     tryAgain(t) {
-        this.running = false;
+        this.lastStatus = "";
+        this.state = State.RESTARTING;
         this.lastTry++;
         if (this.lastTry >= this.numberOfTries) {
             this.lastTry = 0;
             this.currentServer = (this.currentServer + 1) % TOTAL_SERVERS;
             this.conId(SWITCH_SRV, true);
-            this.updateLink();
+            if (this.updateLink()) {
+                this.startBooster(t);
+            }
+        } else {
+            this.forceRestart(t);
         }
-        this.forceRestart(t, true);
     }
     
     stop() {
-        this.xRestart = false;
-        this.running = false;
+        if (this.state == State.STOPPED)
+            return;
+        this.state = State.STOPPED;
         clearTimeout(this.tryStartTTL);
         clearTimeout(this.missTTL);
         clearInterval(this.boosterTTL);
@@ -355,7 +374,6 @@ class CoinBot {
     }
     
     showDebug() {
-        console.log("xRestart", this.xRestart);
         console.log("autobuy", this.autoBuy);
         console.log("smartbuy", this.smartBuy);
         console.log("transferTo", this.transferTo);
@@ -378,17 +396,9 @@ class CoinBot {
         return this.coinWS.tick;
     }
     
-    pause() {
-        this.running = false;
-        this.xRestart = false;
-        this.coinWS.close();
-        clearInterval(this.boosterTTL);
-    }
-    
     start() {
         if (this.coinWS.connected)
             this.conId("VCoinX уже запущен и работает!");
-        this.xRestart = true;
         this.startBooster();
     }
     
@@ -483,5 +493,6 @@ class CoinBot {
 }
 
 module.exports = {
-    CoinBot
+    CoinBot,
+    State
 };
