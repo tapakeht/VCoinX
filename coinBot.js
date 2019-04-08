@@ -68,39 +68,42 @@ let State = {
 }
 
 class CoinBot {
-    constructor(token, doneurl="", id=0, single=false) {
-        this.vk_token = token;
-        this.doneurl = doneurl;
+    constructor(cfg, id=0, single=false) {
+        this.vk_token = cfg.TOKEN || "";
+        this.doneurl = cfg.DONEURL || "";
         this.single = single;
         this.id = id;
 
-        this.miner = new Miner();
-        this.coinWS = new VCoinWS();
-        
         this.user_id = 0;
         this.URLWS = null;
         this.currentServer = 0;
-        
         this.tryStartTTL = null;
         this.missCount = 0;
         this.missTTL = null;
-        this.transferTo = 0;
-        this.transferScore = 3e4;
-        this.transferPercent = 0;
-        this.transferInterval = 36e2;
-        this.transferLastTime = 0;
-        this.autoBuy = false;
-        this.autoBuyItems = ["datacenter"];
-        this.smartBuy = false;
         this.boosterTTL = null;
         this.lastTry = 0;
         this.numberOfTries = 3;
         this.state = State.STARTING;
         this.lastStatus = "";
-        this.showStatus = false;
-        this.showTransferIn = false;
-        this.showTransferOut = false;
-        this.showBuy = false;
+        
+        this.transferTo = cfg.TO || null;
+        this.transferInterval = cfg.TI || 36e2;
+        this.transferCoins = cfg.TSUM || 3e4;
+        this.transferPercent = cfg.TPERC || 0;
+        this.transferLastTime = 0;
+        
+        this.autoBuy = cfg.AUTOBUY || false;
+        this.autoBuyItems = cfg.AUTOBUYITEMS | ["datacenter"];
+        this.smartBuy = cfg.SMARTBUY || false;
+        this.limitCPS = Math.floor(cfg.LIMIT * 1000) || Infinity;
+        
+        this.showStatus = cfg.SHOW_STATUS || false;
+        this.showTransferIn = cfg.SHOW_T_IN || false;
+        this.showTransferOut = cfg.SHOW_T_OUT || false;
+        this.showBuy = cfg.SHOW_BUY || false;
+        
+        this.miner = new Miner();
+        this.coinWS = new VCoinWS();
         
         this.setupWS();
         if (this.updateLink()) {
@@ -240,11 +243,11 @@ class CoinBot {
             this.miner.setScore(score);
             if (place > 0) {
                 if (this.transferPercent) {
-                    this.transferScore = Math.floor(score / 1000 * (this.transferPercent / 100))
+                    this.transferCoins = Math.floor(score / 1000 * (this.transferPercent / 100))
                 }
-                if (this.transferTo && (this.transferScore * 1e3 < score || this.transferScore * 1e3 >= 9e9) && ((Math.floor(Date.now() / 1000) - this.transferLastTime) > this.transferInterval)) {
+                if (this.transferTo && (this.transferCoins * 1e3 < score || this.transferCoins * 1e3 >= 9e9) && ((Math.floor(Date.now() / 1000) - this.transferLastTime) > this.transferInterval)) {
                     try {
-                        let scoreToTransfer = this.transferScore * 1e3 >= 9e9 ? Math.floor(score / 1e3) : this.transferScore;
+                        let scoreToTransfer = this.transferCoins * 1e3 >= 9e9 ? Math.floor(score / 1e3) : this.transferCoins;
                         await this.coinWS.transferToUser(this.transferTo, scoreToTransfer);
                         let template = "Автоматически переведено [" + formatScore(scoreToTransfer * 1e3, true) + "] коинов от @id" + this.user_id + " к @id" + this.transferTo;
                         
@@ -255,7 +258,7 @@ class CoinBot {
                     }
                 }
         
-                if (this.autoBuy && score > 0) {
+                if (this.autoBuy && this.coinWS.tick <= this.limitCPS && score > 0) {
                     for (let i = 0; i < this.autoBuyItems.length; i++) {
                         if (this.miner.hasMoney(this.autoBuyItems[i])) {
                             try {
@@ -263,7 +266,7 @@ class CoinBot {
                                 this.miner.updateStack(result.items);
                                 let template = "Автоматической покупкой был приобретен " + Entit.titles[this.autoBuyItems[i]];;
                                 this.logMisc(template, this.showBuy, "black", "Green");
-                                this.logMisc("Новая скорость: " + formatScore(result.tick, true) + " коинов / тик.");
+                                this.logMisc("Новая скорость: " + formatScore(result.tick, true) + " коинов / тик.", this.showBuy);
                             } catch (e) {
                                 this.conId(e.message == "NOT_ENOUGH_COINS" ? NOT_ENOUGH_COINS : e.message, true)
                             }
@@ -271,7 +274,7 @@ class CoinBot {
                     }
                 }
         
-                if (this.smartBuy && score > 0) {
+                if (this.smartBuy && this.coinWS.tick <= this.limitCPS && score > 0) {
                     let prices = this.justPrices();
                     prices[0] *= 1000;
                     prices[1] = Math.floor(prices[1] / 3) * 1000;
@@ -289,7 +292,7 @@ class CoinBot {
                             this.miner.updateStack(result.items);
                             let template = "Умной покупкой был приобретен " + Entit.titles[smartBuyItem];
                             this.logMisc(template, this.showBuy, "black", "Green");
-                            this.logMisc("Новая скорость: " + formatScore(result.tick, true) + " коинов / тик.");
+                            this.logMisc("Новая скорость: " + formatScore(result.tick, true) + " коинов / тик.", this.showBuy);
                         } catch (e) {
                             this.conId(e.message == "NOT_ENOUGH_COINS" ? NOT_ENOUGH_COINS : e.message, true)
                         }
@@ -376,8 +379,9 @@ class CoinBot {
     showDebug() {
         console.log("autobuy", this.autoBuy);
         console.log("smartbuy", this.smartBuy);
+        console.log("limitCPS", this.limitCPS);
         console.log("transferTo", this.transferTo);
-        console.log("transferScore", this.transferScore);
+        console.log("transferCoins", this.transferCoins);
         console.log("transferInterval", this.transferInterval);
         console.log("transferLastTime", this.transferLastTime);
     }
@@ -418,61 +422,57 @@ class CoinBot {
         }
     }
     
-    setABItems(items, log=false) {
+    setABItems(items) {
         for (let i = 0; i < items.length; i++) {
             if (!Entit.titles[items[i]]) 
                 return this.conId("Неизвестное ускорение: " + items[i], true);
-            if (log)
-                this.conId("Для автоматической покупки установлено ускорение: " + Entit.titles[items[i]]);
+            this.conId("Для автоматической покупки установлено ускорение: " + Entit.titles[items[i]]);
         }
         this.autoBuyItems = items;
     }
     
-    switchAB(log=false) {
+    switchAB() {
         this.autoBuy = !this.autoBuy;
         this.smartBuy = false;
-        if (log) {
-            this.conId("Автопокупка: " + (this.autoBuy ? "Включена" : "Отключена"));
-            this.conId("Умная покупка: Отключена");
-        }
+        this.conId("Автопокупка: " + (this.autoBuy ? "Включена" : "Отключена"));
+        this.conId("Умная покупка: Отключена");
     }
     
-    switchSB(log=false) {
+    switchSB() {
         this.smartBuy = !this.smartBuy;
         this.autoBuy = false;
-        if (log) {
-            this.conId("Умная покупка: " + (this.smartBuy ? "Включена" : "Отключена"));
-            this.conId("Автопокупка: Отключена");
+        this.conId("Умная покупка: " + (this.smartBuy ? "Включена" : "Отключена"));
+        this.conId("Автопокупка: Отключена");
+    }
+    
+    setLimit(lim){
+        if (!isNaN(lim)) {
+            this.limitCPS = Math.floor(lim * 1000);
+            this.conId("Установлен новый лимит коинов / тик для SmartBuy & AutoBuy: " + formatScore(this.limitCPS, true));
+        } else {
+            this.conId("Неверное значение лимита!", true);
         }
     }
     
-    setTransferTo(id, log=false) {
+    setTransferTo(id) {
         this.transferTo = id;
-        if (log) {
-            this.conId("Автоматический перевод коинов на vk.com/id" + this.transferTo);
-        }
+        this.conId("Автоматический перевод коинов на vk.com/id" + this.transferTo);
     }
     
-    setTI(ti, log=false) {
+    setTI(ti) {
         this.transferInterval = ti;
-        if (log) {
-            this.conId("Интервал для автоматического перевода " + this.transferInterval + " секунд.");
-        }
+        this.conId("Интервал для автоматического перевода " + this.transferInterval + " секунд.");
     }
     
-    setTS(ts, log=false) {
-        this.transferScore = ts;
+    setTS(ts) {
+        this.transferCoins = ts;
         this.transferPercent = 0;
-        if (log) {
-            this.conId("Количество коинов для автоматического перевода " + this.transferScore + "");
-        }
+        this.conId("Количество коинов для автоматического перевода " + this.transferCoins + "");
     }
     
     setTP(tp, log=false) {
         this.transferPercent = tp;
-        if (log) {
-            this.conId("Процент коинов для автоматического перевода: " + this.transferPercent + "%");
-        }
+        this.conId("Процент коинов для автоматического перевода: " + this.transferPercent + "%");
     }
     
     showPrices() {

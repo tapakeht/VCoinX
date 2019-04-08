@@ -50,41 +50,7 @@ onUpdates(msg => {
 });
 
 let bots = BOTS.map((cfg, i) => {
-    let bot = new CoinBot(cfg.TOKEN, cfg.DONEURL, i + 1);
-    if (cfg.TO) {
-        bot.setTransferTo(cfg.TO);
-    }
-    if (cfg.TI) {
-        bot.setTI(cfg.TI);
-    }
-    if (cfg.TSUM) {
-        bot.setTS(cfg.TSUM);
-    }
-    if (cfg.TPERC) {
-        bot.setTP(cfg.TPERC);
-    }
-    if (cfg.AUTOBUY) {
-        bot.switchAB();
-    }
-    if (cfg.AUTOBUYITEMS) {
-        bot.setABItems(cfg.AUTOBUYITEMS);
-    }
-    if (cfg.SMARTBUY) {
-        bot.switchSB();
-    }
-    if (cfg.SHOW_STATUS) {
-        bot.showStatus = true;
-    }
-    if (cfg.SHOW_T_IN) {
-        bot.showTransferIn = true;
-    }
-    if (cfg.SHOW_T_OUT) {
-        bot.showTransferOut = true;
-    }
-    if (cfg.SHOW_BUY) {
-        bot.showBuy = true;
-    }
-    return bot;
+    return new CoinBot(cfg, i + 1);
 });
 
 let selBot = -1;
@@ -131,7 +97,8 @@ rl.on('line', async (line) => {
             ccon("tsum - указать сумму для авто-перевода (без запятой).");
             ccon("autobuy - изменить статус авто-покупки.");
             ccon("autobuyitem - указать предмет(ы) для авто-покупки.");
-            ccon("smartbuy - изменить статус умной покупки.")
+            ccon("smartbuy - изменить статус умной покупки.");
+            ccon("setlimit(sl) - установить лимит коинов / тик, до которого будет работать умная / автопокупка");
             ccon("color - изменить цветовую схему консоли.");
             break;
             
@@ -206,36 +173,43 @@ rl.on('line', async (line) => {
     
             case 'autobuyitem':
                 item = await rl.questionAsync("Введи название ускорения для автоматической покупки [cursor, cpu, cpu_stack, computer, server_vk, quantum_pc, datacenter]: ");
-                bots[selBot].setABItems(item.split(" "), true);
+                bots[selBot].setABItems(item.split(" "));
                 break;
     
             case 'ab':
             case 'autobuy':
-                bots[selBot].switchAB(true);
+                bots[selBot].switchAB();
                 break;
     
             case 'sb':
             case 'smartbuy':
-                bots[selBot].switchSB(true);
+                bots[selBot].switchSB();
                 break;
     
+            case 'sl':
+            case 'setlimit':
+                item = await rl.questionAsync("Введите новый лимит коинов / тик для SmartBuy & AutoBuy: ");
+                let lim = parseFloat(item.replace(',', '.'));
+                bots[selBot].setLimit(lim);
+                break;
+                
             case 'to':
                 item = await rl.questionAsync("Введите ID пользователя: ");
-                bots[selBot].setTransferTo(parseInt(item.replace(/\D+/g, "")), true);
+                bots[selBot].setTransferTo(parseInt(item.replace(/\D+/g, "")));
                 break;
     
             case 'ti':
                 item = await rl.questionAsync("Введите интервал: ");
-                bots[selBot].setTI(parseInt(item), true);
+                bots[selBot].setTI(parseInt(item));
                 break;
     
             case 'tsum':
                 item = await rl.questionAsync("Введите сумму: ");
-                bots[selBot].setTS(parseInt(item), true);
+                bots[selBot].setTS(parseInt(item));
                 break;
     
             case 'tperc':
-                bots[selBot].setTP(parseInt(item), true);
+                bots[selBot].setTP(parseInt(item));
                 break;
     
             case 'p':

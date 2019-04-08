@@ -9,10 +9,11 @@ module.exports = {
             TO: 123456, //ID для автоперевода
             AUTOBUY: true, 
             AUTOBUYITEMS: [
-                "quantum_pc",
+                "quantum_pc", //предметы для автопокупки
                 "datacenter"
             ],
             //SMARTBUY: true,
+            LIMIT: 27.5, //лимит (27.5 коин/тик), до которого работает автопокупка
             SHOW_STATUS: true, //показывать количество коинов и место в топе
             SHOW_T_IN: true, //показывать автопереводы от этого бота
             SHOW_T_OUT: true, //показывать полученные переводы
