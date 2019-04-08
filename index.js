@@ -116,6 +116,8 @@ rl.on('line', async (line) => {
         case "?":
         case "help":
             ccon("-- VCoinX --", "red");
+            ccon("showall - показать статус всех ботов.");
+            ccon("sel(ect) - выбрать бота.");
             ccon("info - отображение основной информации.");
             ccon("debug - отображение тестовой информации.");
             ccon("stop(pause)	- остановка майнера.");
@@ -157,6 +159,12 @@ rl.on('line', async (line) => {
             if (!isNaN(id) && id > 0 && id <= bots.length) {
                 selBot = id - 1;
                 ccon("Выбран бот #"+id)
+            }
+            break;
+            
+        case 'showall':
+            for (let i = 0; i < bots.length; i++) {
+                bots[i].conStatus();
             }
             break;
     }
