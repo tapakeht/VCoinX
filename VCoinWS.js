@@ -59,8 +59,9 @@ class VCoinWS {
             };
 
             this.ws.onerror = e => {
-                console.error("На стороне сервера возникла ошибка: " + e);
+                console.error("На стороне сервера возникла ошибка: " + e.message);
                 this.retryTime = 1e3;
+                this.reconnect(wsServer, true);
             }
 
             this.ws.onclose = _ => {

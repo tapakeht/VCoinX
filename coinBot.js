@@ -26,6 +26,7 @@ const {
 
 const NO_TOKEN = "Бот остановлен (отсутствует токен). Информация о получении токена: github.com/cursedseal/VCoinX",
     URL_NO_VK_ID = "При анализе ссылки не был найден ID пользователя.",
+    USING_TOKEN = "Бот авторизуется через токен...",
     STARTING = "Бот запускается...",
     STARTED = "Бот запущен!",
     BAD_CONN_PAUSED = "Плохое соединение с сервером, бот был приостановлен.",
@@ -39,7 +40,8 @@ const NO_TOKEN = "Бот остановлен (отсутствует токен
     TRANSFER_OK = "Перевод был выполнен успешно.",
     BAD_ARGS = "Вероятно, вы где-то указали неверный аргумент.",
     INVALID_TOKEN = "Указан некорректный токен пользователя! Перепроверьте токен или получите новый, как указано в данном руководстве -> github.com/cursedseal/VCoinX",
-    NO_CONN = "Не удалось подключиться к API! Проверьте подключение к интернету или попробуйте установить VPN.";
+    NO_CONN = "Не удалось подключиться к API! Проверьте подключение к интернету или попробуйте установить VPN.",
+    TOKEN_GET_FAILED = "Не удалось получить токен пользователя с помощью логина и пароля! Попробуйте указать токен вручную.";
 
 const TOTAL_SERVERS = 4
 ;
@@ -79,8 +81,10 @@ let State = {
 
 class CoinBot {
     constructor(cfg, id=0, single=false) {
-        this.vk_token = cfg.TOKEN || "";
-        this.doneurl = cfg.DONEURL || "";
+        this.login = getDefault(cfg.LOGIN, "");
+        this.password = getDefault(cfg.PASSWORD, "");
+        this.vk_token = getDefault(cfg.TOKEN, "");
+        this.doneurl = getDefault(cfg.DONEURL, "");
         this.single = single;
         this.id = id;
         
@@ -193,15 +197,61 @@ class CoinBot {
         }
     }
     
+    async getToken() {
+        let vk = new VK();
+        const { auth } = vk;
+        vk.setOptions({
+            login: this.login,
+            password: this.password
+        });
+        //TODO choose app
+        let direct = auth.androidApp();
+        try {
+            let response = await direct.run();
+            if (!response.token) {
+                this.conId(TOKEN_GET_FAILED, true);
+                return false;
+            }
+            this.vk_token = response.token;
+            return true;
+        } catch (e) {
+            switch (e.code) {
+                case 'PAGE_BLOCKED':
+                    this.conId("Страница пользователя заблокирована.", true);
+                    break;
+                case 'AUTHORIZATION_FAILED':
+                    this.conId("Указаны неправильный логин и/или пароль.", true);
+                    break;
+                case 'FAILED_PASSED_CAPTCHA':
+                case 'FAILED_PASSED_TWO_FACTOR':
+                case 'MISSING_TWO_FACTOR_HANDLER':
+                case 'MISSING_CAPTCHA_HANDLER':
+                    this.conId("Требуется ввод капчи, но VCoinX сам этого делать пока не умеет :(", true);
+                    break;
+                default:
+                    console.error(e);
+                    break;
+            }
+            return false;
+        }
+    }
+
     updateLink() {
         if (!this.doneurl) {
-            if (!this.vk_token) {
-                this.conId(NO_TOKEN, true);
-                return this.stop();
-            }
             let vk = new VK();
-            vk.token = this.vk_token;
             return (async _ => {
+                if (!this.vk_token) {
+                    if (this.login && this.password) {
+                        if (!(await this.getToken())) {
+                            return this.stop();
+                        }
+                    } else {
+                        this.conId(NO_TOKEN, true);
+                        return this.stop();
+                    }
+                }
+                vk.token = this.vk_token;
+
                 try {
                     let {
                         mobile_iframe_url
@@ -226,18 +276,24 @@ class CoinBot {
                     } else {
                         this.conId('API Error: ' + error, true);
                     }
-                    this.stop();
-                    return false;
+                    if (this.login && this.password) {
+                        this.token = "";
+                        return this.updateLink();
+                    } else {
+                        return this.stop();
+                    }
                 }
             })();
         } else {
             let gsearch = url.parse(this.doneurl, true);
             if (!gsearch.query || !gsearch.query.vk_user_id) {
-                this.conId(URL_NO_VK_ID, true);
                 if (this.vk_token){
+                    this.conId(URL_NO_VK_ID, true);
+                    this.conId(USING_TOKEN);
                     this.doneurl = "";
                     return this.updateLink();
                 } else {
+                    this.conId(URL_NO_VK_ID, true);
                     this.stop();
                     return false;
                 }
@@ -431,7 +487,7 @@ class CoinBot {
                         }
                     }
                 }
-                let template = "Умной покупкой был приобритен " + Entit.titles[this.smartBuyItem] + " в количестве " + this.smartBuyCount + " шт.";
+                let template = "Умной покупкой был приобретен " + Entit.titles[this.smartBuyItem] + " в количестве " + this.smartBuyCount + " шт.";
                 this.logMisc(template, this.showBuy);
             } catch (e) {
                 this.conBuyError(e);

@@ -28,16 +28,15 @@ const {
 
 let {
     BOTS
-} = existsFile('./config.js') ? require('./config.js') : {};
+} = require('./config.js');
 
 let {
     autobeep,
-    offColors
+    offColors,
+    disableUpdates
 } = require('./settings')
 
 let
-    advertDisp = true,
-    disableUpdates = false,
     updatesEv = false,
     updatesInterval = 60,
     updatesLastTime = 0;
@@ -57,6 +56,19 @@ let bots = BOTS.map((cfg, i) => {
 
 let vk = new VK();
 vk.token = globalToken;
+
+async function getUserId(user){
+    try {
+        let userinfo = await vk.api.users.get({
+            user_ids: user
+        });
+        return userinfo[0].id;
+    } catch (e) {
+        con("API error: " + e.message, true);
+        return 0;
+    }
+}
+
 let selBot = -1;
 
 let showStatus = setInterval(_ => {
@@ -79,6 +91,7 @@ let showStatus = setInterval(_ => {
 }, 1e4);
 
 rl.on('line', async (line) => {
+    let id;
 	switch (line.trim().toLowerCase()) {
         case '':
             break;
@@ -96,6 +109,8 @@ rl.on('line', async (line) => {
             ccon("(p)rice - отображение цен на товары.");
             ccon("tran(sfer) / pay	- перевод игроку.");
             ccon("hideupd(ate) - скрыть уведомление об обновлении.");
+            ccon("getscore(gs) - узнать количество коинов у другого пользователя.");
+            ccon("(auto)beep  - автоматическое проигрывание звука ошибки при ошибках.");
             ccon("to - указать ID и включить авто-перевод средств на него.");
             ccon("ti - указать интервал для авто-перевода (в секундах).");
             ccon("tsum - указать сумму для авто-перевода (без запятой).");
@@ -123,11 +138,37 @@ rl.on('line', async (line) => {
             autobeep = !autobeep;
             ccon("Автоматическое проигрывание звука при ошибках " + autobeep ? "включено" : "отключено" + ".");
             break;
+
+        case 'gs':
+        case 'getscore':
+            id = await rl.questionAsync("ID пользователя: ");
+            if (id.match(/^\d+$/)) {
+                id = parseInt(id)
+            } else {
+                id = await getUserId(id);
+            }
+            let ok = false;
+            for (let i = 0; i < bots.length; i++){
+                if (bots[i].state == State.RUNNING){
+                    ok = true;
+                    try {
+                        let gscore = await bots[i].coinWS.getUserScores([id]);
+                        con("Текущий баланс пользователя @id" + id.toString() + ": " + formatScore(gscore[id], true) + " коинов.");
+                    } catch (e) {
+                        console.error("Ошибка при получении баланса:", e);
+                    }
+                    break;
+                }
+            }
+            if (!ok) {
+                con("Нет работающих ботов!", true)
+            }
+            break;
         
         case 'sel':
         case 'select':
             let item = await rl.questionAsync("ID бота: ");
-            let id = parseInt(item);
+            id = parseInt(item);
             if (!isNaN(id) && id > 0 && id <= bots.length) {
                 selBot = id - 1;
                 ccon("Выбран бот #"+id)
@@ -205,8 +246,13 @@ rl.on('line', async (line) => {
                 break;
                 
             case 'to':
-                item = await rl.questionAsync("Введите ID пользователя: ");
-                bots[selBot].setTransferTo(parseInt(item.replace(/\D+/g, "")));
+                id = await rl.questionAsync("ID получателя: ");
+                if (id.match(/^\d+$/)) {
+                    id = parseInt(id)
+                } else {
+                    id = await getUserId(id);
+                }
+                bots[selBot].setTransferTo(id);
                 break;
     
             case 'ti':
@@ -233,21 +279,11 @@ rl.on('line', async (line) => {
             case 'tran':
             case 'transfer':
                 let count = await rl.questionAsync("Количество: ");
-                let id = await rl.questionAsync("ID получателя: ");
+                id = await rl.questionAsync("ID получателя: ");
                 if (id.match(/^\d+$/)) {
                     id = parseInt(id)
                 } else {
-                    id = await (async _ => {
-                        try {
-                            let userinfo = await vk.api.users.get({
-                                user_ids: id
-                            });
-                            return userinfo[0].id;
-                        } catch (e) {
-                            con("API error: " + e.message, true);
-                            return 0;
-                        }
-                    })();
+                    id = await getUserId(id);
                 }
                 let conf = "";
                 if (id > 0) {

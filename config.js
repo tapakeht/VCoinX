@@ -21,8 +21,8 @@ module.exports = {
             SHOW_BUY: true //показывать сообщения об автопокупке / умной покупке
         },
         {
-            TOKEN: "token2_here",
-            DONEURL: "https://coin.vkforms.ru/index.html/1",
+            LOGIN: "+79123456789",
+            PASSWORD: "qwerty", 
             TPERC: 75, //автоперевод в процентах
             TO: 654321, //ID для автоперевода
             SMARTBUY: true,

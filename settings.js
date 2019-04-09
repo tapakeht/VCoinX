@@ -1,4 +1,5 @@
 module.exports = {
     autobeep: false,
-    offColors: false
+    offColors: false,
+    disableUpdates: false
 };
