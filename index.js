@@ -240,7 +240,7 @@ rl.on('line', async (line) => {
                     id = await (async _ => {
                         try {
                             let userinfo = await vk.api.users.get({
-                                user_ids: uid
+                                user_ids: id
                             });
                             return userinfo[0].id;
                         } catch (e) {
