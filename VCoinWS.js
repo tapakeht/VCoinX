@@ -59,7 +59,8 @@ class VCoinWS {
             };
 
             this.ws.onerror = e => {
-                console.error(e.message);
+                console.error("На стороне сервера возникла ошибка: " + e);
+                this.retryTime = 1e3;
             }
 
             this.ws.onclose = _ => {
@@ -98,7 +99,7 @@ class VCoinWS {
                                 let x = safeEval(pow, {
                                         window: {
                                             location: {
-                                                host: 'vk.ru'
+                                                host: 'vk.com'
                                             },
                                             navigator: {
                                                 userAgent: 'Mozilla/5.0 (Windows; U; Win98; en-US; rv:0.9.2) Gecko/20010725 Netscape6/6.1'
@@ -125,6 +126,7 @@ class VCoinWS {
                     -1 === t.indexOf("MISS") &&
                     -1 === t.indexOf("TR") &&
                     -1 === t.indexOf("BROKEN") &&
+                    -1 === t.indexOf("ALREADY_CONNECTED") &&
                     "C" !== t[0] && "R" !== t[0]) {
                     console.log("on Message:\n", t);
                 }

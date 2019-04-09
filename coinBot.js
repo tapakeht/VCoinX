@@ -234,8 +234,13 @@ class CoinBot {
             let gsearch = url.parse(this.doneurl, true);
             if (!gsearch.query || !gsearch.query.vk_user_id) {
                 this.conId(URL_NO_VK_ID, true);
-                this.stop();
-                return false;
+                if (this.vk_token){
+                    this.doneurl = "";
+                    return this.updateLink();
+                } else {
+                    this.stop();
+                    return false;
+                }
             }
             this.user_id = parseInt(gsearch.query.vk_user_id);
     
@@ -321,7 +326,8 @@ class CoinBot {
         
             clearInterval(this.boosterTTL);
             this.boosterTTL = setInterval(_ => {
-                rand(0, 5) > 3 && this.coinWS.click();
+                if(rand(0, 5) > 3)
+                    this.coinWS.click();
             }, 5e2);
             this.lastStatus = "Позиция в топе: " + place + "\tКоличество коинов: " + formatScore(score, true);
             this.state = State.RUNNING;
@@ -365,7 +371,7 @@ class CoinBot {
             this.transferLastTime = Math.floor(Date.now() / 1000);
             this.logMisc(template, this.showTransferOut, "black", "Green");
         } catch (e) {
-            this.conId("Автоматический перевод не удалася. Ошибка: " + e.message, true);
+            this.conId("Автоматический перевод не удался. Ошибка: " + e.message, true);
         }
         this.endTransaction();
     }
