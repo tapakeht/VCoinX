@@ -48,10 +48,15 @@ onUpdates(msg => {
     con(msg, "white", "Red");
 });
 
+let globalToken = "";
 let bots = BOTS.map((cfg, i) => {
-    return new CoinBot(cfg, i + 1);
+    let bot = new CoinBot(cfg, i + 1);
+    globalToken = globalToken || bot.vk_token;
+    return bot;
 });
 
+let vk = new VK();
+vk.token = globalToken;
 let selBot = -1;
 
 let showStatus = setInterval(_ => {
@@ -89,7 +94,7 @@ rl.on('line', async (line) => {
             ccon("start(run)	- запуск майнера.");
             ccon("(b)uy	- покупка улучшений.");
             ccon("(p)rice - отображение цен на товары.");
-            ccon("tran(sfer)	- перевод игроку.");
+            ccon("tran(sfer) / pay	- перевод игроку.");
             ccon("hideupd(ate) - скрыть уведомление об обновлении.");
             ccon("to - указать ID и включить авто-перевод средств на него.");
             ccon("ti - указать интервал для авто-перевода (в секундах).");
@@ -224,14 +229,32 @@ rl.on('line', async (line) => {
                 bots[selBot].showPrices();
                 break;
     
+            case 'pay':
             case 'tran':
             case 'transfer':
                 let count = await rl.questionAsync("Количество: ");
                 let id = await rl.questionAsync("ID получателя: ");
-                let conf = await rl.questionAsync("Вы уверены? [yes]: ");
-                id = parseInt(id.replace(/\D+/g, ""));
-                if (conf.toLowerCase().replace(/^\s+|\s+$/g, '') != "yes" || !id || !count)
-                    return con("Отправка не была произведена, вероятно, один из параметров не был указан.", true);
+                if (id.match(/^\d+$/)) {
+                    id = parseInt(id)
+                } else {
+                    id = await (async _ => {
+                        try {
+                            let userinfo = await vk.api.users.get({
+                                user_ids: uid
+                            });
+                            return userinfo[0].id;
+                        } catch (e) {
+                            con("API error: " + e.message, true);
+                            return 0;
+                        }
+                    })();
+                }
+                let conf = "";
+                if (id > 0) {
+                    conf = await rl.questionAsync("Вы уверены? [yes]: ");
+                }
+                if (conf.toLowerCase().replace(/^\s+|\s+$/g, '') != "yes" || id <= 0 || count <= 0)
+                    return con("Отправка не была произведена, вероятно, один из параметров был указан неверно.", true);
                 await bots[selBot].transfer(id, count);
                 break;
         }

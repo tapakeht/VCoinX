@@ -25,7 +25,7 @@ const {
 } = require('./settings');
 
 const NO_TOKEN = "Бот остановлен (отсутствует токен). Информация о получении токена: github.com/cursedseal/VCoinX",
-    URL_NO_VK_ID = "При анализе ссылки не был найден vk_user_id.",
+    URL_NO_VK_ID = "При анализе ссылки не был найден ID пользователя.",
     STARTING = "Бот запускается...",
     STARTED = "Бот запущен!",
     BAD_CONN_PAUSED = "Плохое соединение с сервером, бот был приостановлен.",
@@ -405,7 +405,7 @@ class CoinBot {
             this.smartBuyItem = Entit.names[good];
             this.smartBuyPrice = min;
             this.smartBuyCount = count[good];
-            this.logMisc("Умной покупкой было проанилизировано, что выгодно будет приобрести улучшение " + Entit.titles[this.smartBuyItem] + ".", this.showBuy);
+            this.logMisc("Умной покупкой было определено, что выгодно будет приобрести улучшение " + Entit.titles[this.smartBuyItem] + ".", this.showBuy);
             this.logMisc("Стоимость: " + formatScore(min, true) + " коинов за " + count[good] + " шт.", this.showBuy);
         }
 
@@ -552,7 +552,7 @@ class CoinBot {
     
     setTransferTo(id) {
         this.transferTo = id;
-        this.conId("Автоматический перевод коинов на vk.com/id" + this.transferTo);
+        this.conId("Автоматический перевод коинов на @id" + this.transferTo);
     }
     
     setTI(ti) {
@@ -581,7 +581,7 @@ class CoinBot {
         try {
             await this.coinWS.transferToUser(id, count);
             this.conId(TRANSFER_OK, "black", "Green");
-            let template = "Произведена отпрвка [" + formatScore(count * 1e3, true) + "] коинов от vk.com/id" + this.user_id.toString() + " для vk.com/id" + id.toString();
+            let template = "Произведён перевод [" + formatScore(count * 1e3, true) + "] коинов от @id" + this.user_id.toString() + " к @id" + id.toString();
             this.infLogId(template);
         } catch (e) {
             this.conId(e.message == "BAD_ARGS" ? BAD_ARGS : e.message, true);
