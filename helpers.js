@@ -61,7 +61,7 @@ function ccon(message, color, colorBG, ret) {
     }
     colorBG = "bg" + ((typeof colorBG == "string") ? colorBG : "Black");
     color = (typeof color == "string") ? color : "green";
-    temp += !offColors ? colors[colorBG](colors[color](message)) : message;
+    temp += (!offColors || color === false) ? colors[colorBG](colors[color](message)) : message;
     !ret && console.log(temp);
     return temp;
 }
@@ -173,6 +173,15 @@ function beep() {
     process.stdout.write('\x07');
 }
 
+function removeLetters(e) {
+    return parseInt(e.replace(/\D+/g, ""));
+}
+
+function mathPrice(price, count) {
+    if (count >= 100)
+        return Infinity; //1e11, невозможно купить
+    return count <= 1 ? price : Math.ceil(1.3 * mathPrice(price, count - 1)) + price;
+}
 
 module.exports = {
     rl,
@@ -193,4 +202,5 @@ module.exports = {
     infLog,
     rand,
     beep,
+    mathPrice
 }

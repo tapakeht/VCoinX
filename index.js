@@ -45,7 +45,6 @@ let
 onUpdates(msg => {
     if (!updatesEv && !disableUpdates)
         updatesEv = msg;
-
     con(msg, "white", "Red");
 });
 
@@ -95,9 +94,10 @@ rl.on('line', async (line) => {
             ccon("to - указать ID и включить авто-перевод средств на него.");
             ccon("ti - указать интервал для авто-перевода (в секундах).");
             ccon("tsum - указать сумму для авто-перевода (без запятой).");
-            ccon("autobuy - изменить статус авто-покупки.");
+            ccon("autobuy(ab) - изменить статус авто-покупки.");
             ccon("autobuyitem - указать предмет(ы) для авто-покупки.");
-            ccon("smartbuy - изменить статус умной покупки.");
+            ccon("smartbuy(sb) - изменить статус умной покупки.");
+            ccon("psb - установить процент от количества коинов, который будет выделяться на умную покупку.");
             ccon("setlimit(sl) - установить лимит коинов / тик, до которого будет работать умная / автопокупка");
             ccon("color - изменить цветовую схему консоли.");
             break;
@@ -172,6 +172,7 @@ rl.on('line', async (line) => {
                 break;
     
             case 'autobuyitem':
+            case 'autobuyitems':
                 item = await rl.questionAsync("Введи название ускорения для автоматической покупки [cursor, cpu, cpu_stack, computer, server_vk, quantum_pc, datacenter]: ");
                 bots[selBot].setABItems(item.split(" "));
                 break;
@@ -185,7 +186,12 @@ rl.on('line', async (line) => {
             case 'smartbuy':
                 bots[selBot].switchSB();
                 break;
-    
+
+            case 'psb':
+                item = await rl.questionAsync("Введи процентное соотношение, выделяемое под SmartBuy: ");
+                bots[selBot].setPSB(parseInt(item));
+                break;
+
             case 'sl':
             case 'setlimit':
                 item = await rl.questionAsync("Введите новый лимит коинов / тик для SmartBuy & AutoBuy: ");
@@ -224,7 +230,7 @@ rl.on('line', async (line) => {
                 let id = await rl.questionAsync("ID получателя: ");
                 let conf = await rl.questionAsync("Вы уверены? [yes]: ");
                 id = parseInt(id.replace(/\D+/g, ""));
-                if (conf.toLowerCase() != "yes" || !id || !count)
+                if (conf.toLowerCase().replace(/^\s+|\s+$/g, '') != "yes" || !id || !count)
                     return con("Отправка не была произведена, вероятно, один из параметров не был указан.", true);
                 await bots[selBot].transfer(id, count);
                 break;

@@ -15,7 +15,8 @@ const {
     formatScore,
     infLog,
     rand,
-    beep
+    beep,
+    mathPrice
 } = require('./helpers');
 
 const {
@@ -28,16 +29,25 @@ const NO_TOKEN = "Бот остановлен (отсутствует токен
     STARTING = "Бот запускается...",
     STARTED = "Бот запущен!",
     BAD_CONN_PAUSED = "Плохое соединение с сервером, бот был приостановлен.",
-    NOT_ENOUGH_COINS = "Недостаточно средств для покупки",
+    NOT_ENOUGH_COINS = "Недостаточно средств для приобретения.",
+    ITEM_404 = "Предмет не найден.",
     USER_LOADED = "Пользователь успешно загружен.",
     BRK_EVT = "Обнаружен brokenEvent, видимо сервер сломался.\n\t\tЧерез 10 секунд будет выполнен перезапуск.",
     SWITCH_SRV = "Достигнут лимит попыток подключиться к серверу.\n\t\t\tПроизводится смена сервера...",
     OTHER_DEVICE = "Обнаружено открытие приложения с другого устройства.\n\t\tЧерез 30 секунд будет выполнен перезапуск.",
     USER_OFFLINE = "Пользователь отключен от сервера.\n\t\tЧерез 20 секунд будет выполнен перезапуск.",
     TRANSFER_OK = "Перевод был выполнен успешно.",
-    BAD_ARGS = "Вероятно, вы где-то указали неверный аргумент.";
+    BAD_ARGS = "Вероятно, вы где-то указали неверный аргумент.",
+    INVALID_TOKEN = "Указан некорректный токен пользователя! Перепроверьте токен или получите новый, как указано в данном руководстве -> github.com/cursedseal/VCoinX",
+    NO_CONN = "Не удалось подключиться к API! Проверьте подключение к интернету или попробуйте установить VPN.";
 
-const TOTAL_SERVERS = 4;
+const TOTAL_SERVERS = 4
+;
+function getDefault(val, def) {
+     if (val !== undefined)
+        return val;
+    return def;
+}
 
 function formatWSS(link, user_id, server) {
     let gsearch = url.parse(link),
@@ -73,7 +83,24 @@ class CoinBot {
         this.doneurl = cfg.DONEURL || "";
         this.single = single;
         this.id = id;
-
+        
+        this.transferTo = getDefault(cfg.TO, null);
+        this.transferInterval = getDefault(cfg.TI, 3600);
+        this.transferCoins = getDefault(cfg.TSUM, 3e4);
+        this.transferPercent = getDefault(cfg.TPERC, 0);
+        this.transferLastTime = 0;
+        
+        this.autoBuy = getDefault(cfg.AUTOBUY, false);
+        this.autoBuyItems = (cfg.AUTOBUYITEMS, ["datacenter"]);
+        this.smartBuy = getDefault(cfg.SMARTBUY, false);
+        this.percentForSB = getDefault(cfg.PSB, 100);
+        this.limitCPS = getDefault(Math.floor(cfg.LIMIT * 1000), Infinity);
+        
+        this.showStatus = getDefault(cfg.SHOW_STATUS, false);
+        this.showTransferIn = getDefault(cfg.SHOW_T_IN, false);
+        this.showTransferOut = getDefault(cfg.SHOW_T_OUT, false);
+        this.showBuy = getDefault(cfg.SHOW_BUY, false);
+        
         this.user_id = 0;
         this.URLWS = null;
         this.currentServer = 0;
@@ -85,23 +112,11 @@ class CoinBot {
         this.numberOfTries = 3;
         this.state = State.STARTING;
         this.lastStatus = "";
-        
-        this.transferTo = cfg.TO || null;
-        this.transferInterval = cfg.TI || 36e2;
-        this.transferCoins = cfg.TSUM || 3e4;
-        this.transferPercent = cfg.TPERC || 0;
-        this.transferLastTime = 0;
-        
-        this.autoBuy = cfg.AUTOBUY || false;
-        this.autoBuyItems = cfg.AUTOBUYITEMS | ["datacenter"];
-        this.smartBuy = cfg.SMARTBUY || false;
-        this.limitCPS = Math.floor(cfg.LIMIT * 1000) || Infinity;
-        
-        this.showStatus = cfg.SHOW_STATUS || false;
-        this.showTransferIn = cfg.SHOW_T_IN || false;
-        this.showTransferOut = cfg.SHOW_T_OUT || false;
-        this.showBuy = cfg.SHOW_BUY || false;
-        
+        this.transactionInProcess = false;
+        this.smartBuyItem = null;
+        this.smartBuyPrice = 0;
+        this.smartBuyCount = 0;
+
         this.miner = new Miner();
         this.coinWS = new VCoinWS();
         
@@ -111,10 +126,33 @@ class CoinBot {
         }
     }
     
+    beginTransaction() {
+        if (this.transactionInProcess)
+            return false;
+        return this.transactionInProcess = true;
+    }
+
+    endTransaction() {
+        this.transactionInProcess = false;
+    }
+
+    conBuyError(e) {
+        let msg = e.message;
+        switch (msg) {
+            case "NOT_ENOUGH_COINS":
+                msg = NOT_ENOUGH_COINS;
+                break;
+            case "ITEM NOT FOUND":
+                msg = ITEM_404;
+                break;
+        }
+        this.conId(msg, true)
+    }
+
     lPrices() {
         let temp = "";
         temp += Entit.names.map(el => {
-            return ccon("\n> [" + el + "] " + Entit.titles[el] + " - " + formatScore(this.miner.getPriceForItem(el), true), this.miner.hasMoney(el) ? "green" : "red", "Black", true);
+            return ccon("\n> [" + el + "] " + Entit.titles[el] + " (" + miner.getItemCount(el) + " -> " + (miner.getItemCount(el) + 1) + ") - " + formatScore(this.miner.getPriceForItem(el), true), this.miner.hasMoney(el) ? "green" : "red", "Black", true);
         });
         return temp;
     }
@@ -181,7 +219,13 @@ class CoinBot {
                     this.URLWS = formatWSS(mobile_iframe_url, this.user_id, this.currentServer);
                     return true;
                 } catch (error) {
-                    this.conId('API Error: ' + error, true);
+                    if (error.code == 5){
+                        this.conId(INVALID_TOKEN, true);
+                    } else if ((error.code == 'ECONNREFUSED' || error.code == 'ENOENT')) {
+                        this.conId(NO_CONN, true);
+                    } else {
+                        this.conId('API Error: ' + error, true);
+                    }
                     this.stop();
                     return false;
                 }
@@ -246,58 +290,17 @@ class CoinBot {
                     this.transferCoins = Math.floor(score / 1000 * (this.transferPercent / 100))
                 }
                 if (this.transferTo && (this.transferCoins * 1e3 < score || this.transferCoins * 1e3 >= 9e9) && ((Math.floor(Date.now() / 1000) - this.transferLastTime) > this.transferInterval)) {
-                    try {
-                        let scoreToTransfer = this.transferCoins * 1e3 >= 9e9 ? Math.floor(score / 1e3) : this.transferCoins;
-                        await this.coinWS.transferToUser(this.transferTo, scoreToTransfer);
-                        let template = "Автоматически переведено [" + formatScore(scoreToTransfer * 1e3, true) + "] коинов от @id" + this.user_id + " к @id" + this.transferTo;
-                        
-                        this.transferLastTime = Math.floor(Date.now() / 1000);
-                        this.logMisc(template, this.showTransferOut, "black", "Green");
-                    } catch (e) {
-                        this.conId("Автоматический перевод не удалася. Ошибка: " + e.message, true);
-                    }
+                    await this.doAutoTransfer();
                 }
         
                 if (this.autoBuy && this.coinWS.tick <= this.limitCPS && score > 0) {
-                    for (let i = 0; i < this.autoBuyItems.length; i++) {
-                        if (this.miner.hasMoney(this.autoBuyItems[i])) {
-                            try {
-                                result = await this.coinWS.buyItemById(this.autoBuyItems[i]);
-                                this.miner.updateStack(result.items);
-                                let template = "Автоматической покупкой был приобретен " + Entit.titles[this.autoBuyItems[i]];;
-                                this.logMisc(template, this.showBuy, "black", "Green");
-                                this.logMisc("Новая скорость: " + formatScore(result.tick, true) + " коинов / тик.", this.showBuy);
-                            } catch (e) {
-                                this.conId(e.message == "NOT_ENOUGH_COINS" ? NOT_ENOUGH_COINS : e.message, true)
-                            }
-                        }
-                    }
+                    await this.doAutoBuy();
                 }
         
                 if (this.smartBuy && this.coinWS.tick <= this.limitCPS && score > 0) {
-                    let prices = this.justPrices();
-                    prices[0] *= 1000;
-                    prices[1] = Math.floor(prices[1] / 3) * 1000;
-                    prices[2] *= 100;
-                    prices[3] = Math.floor(prices[3] / 3) * 100;
-                    prices[4] *= 10;
-                    prices[5] *= 2;
-                    let min = Math.min.apply(null, prices);
-                    let good = prices.indexOf(min);
-                    let smartBuyItem = Entit.names[good];
-        
-                    if (this.miner.hasMoney(smartBuyItem)) {
-                        try {
-                            result = await this.coinWS.buyItemById(smartBuyItem);
-                            this.miner.updateStack(result.items);
-                            let template = "Умной покупкой был приобретен " + Entit.titles[smartBuyItem];
-                            this.logMisc(template, this.showBuy, "black", "Green");
-                            this.logMisc("Новая скорость: " + formatScore(result.tick, true) + " коинов / тик.", this.showBuy);
-                        } catch (e) {
-                            this.conId(e.message == "NOT_ENOUGH_COINS" ? NOT_ENOUGH_COINS : e.message, true)
-                        }
-                    }
+                    await this.doSmartBuy();
                 }
+
                 let msg = "Позиция в топе: " + place + "\tКоличество коинов: " + formatScore(score, true);
                 this.lastStatus = msg;
                 this.conMisc(msg, "yellow");
@@ -348,6 +351,87 @@ class CoinBot {
                 this.tryAgain(2e4);
             }
         });
+    }
+
+    async doAutoTransfer() {
+        if (this.state != State.RUNNING || !this.beginTransaction())
+            return;
+        try {
+            let scoreToTransfer = this.transferCoins * 1e3 >= 9e9 ? Math.floor(this.miner.score / 1e3) : this.transferCoins;
+            this.transactionInProcess = true;
+            await this.coinWS.transferToUser(this.transferTo, scoreToTransfer);
+            let template = "Автоматически переведено [" + formatScore(scoreToTransfer * 1e3, true) + "] коинов от @id" + this.user_id + " к @id" + this.transferTo;
+            
+            this.transferLastTime = Math.floor(Date.now() / 1000);
+            this.logMisc(template, this.showTransferOut, "black", "Green");
+        } catch (e) {
+            this.conId("Автоматический перевод не удалася. Ошибка: " + e.message, true);
+        }
+        this.endTransaction();
+    }
+
+    async doAutoBuy() {
+        if (this.state != State.RUNNING || !this.beginTransaction())
+            return;
+        for (let i = 0; i < this.autoBuyItems.length; i++) {
+            if (this.miner.hasMoney(this.autoBuyItems[i])) {
+                try {
+                    result = await this.coinWS.buyItemById(this.autoBuyItems[i]);
+                    this.miner.updateStack(result.items);
+                    let template = "Автоматической покупкой был приобретен " + Entit.titles[this.autoBuyItems[i]];;
+                    this.logMisc(template, this.showBuy, "black", "Green");
+                    this.logMisc("Новая скорость: " + formatScore(result.tick, true) + " коинов / тик.", this.showBuy);
+                } catch (e) {
+                    this.conBuyError(e);
+                }
+            }
+        }
+        this.endTransaction();
+    }
+
+    async doSmartBuy() {
+        if (this.state != State.RUNNING)
+            return;
+        let ratio = 100 / this.percentForSB;
+        let count = [1000, 333, 100, 34, 10, 2, 1];
+        let prices = this.justPrices();
+        let itemName = "";
+        Object.keys(count).forEach(id => {
+            prices[id] = mathPrice(prices[id], count[id]);
+        });
+        if (this.smartBuyItem === null){
+            let min = Math.min.apply(null, prices);
+            let good = prices.indexOf(min);
+            this.smartBuyItem = Entit.names[good];
+            this.smartBuyPrice = min;
+            this.smartBuyCount = count[good];
+            this.logMisc("Умной покупкой было проанилизировано, что выгодно будет приобрести улучшение " + Entit.titles[this.smartBuyItem] + ".", this.showBuy);
+            this.logMisc("Стоимость: " + formatScore(min, true) + " коинов за " + count[good] + " шт.", this.showBuy);
+        }
+
+        if (Math.floor(this.miner.score * this.percentForSB / 100) > this.smartBuyPrice) {
+            if (this.state != State.RUNNING || !this.beginTransaction())
+                return;
+            try {
+                let cnt = this.smartBuyCount;
+                while (cnt) {
+                    try {
+                        let result = await this.coinWS.buyItemById(this.smartBuyItem);
+                        this.miner.updateStack(result.items);
+                        cnt--;
+                    } catch (e) {
+                        if (e.message != "ANOTHER_TRANSACTION_IN_PROGRESS") {
+                            throw e;
+                        }
+                    }
+                }
+                let template = "Умной покупкой был приобритен " + Entit.titles[this.smartBuyItem] + " в количестве " + this.smartBuyCount + " шт.";
+                this.logMisc(template, this.showBuy);
+            } catch (e) {
+                this.conBuyError(e);
+            }
+            this.endTransaction();
+        }
     }
     
     tryAgain(t) {
@@ -407,6 +491,8 @@ class CoinBot {
     }
     
     async buy(items) {
+        if (!this.beginTransaction())
+            return;
         for (let i = 0, j = items.length; i < j; i++) {
             if (!items[i])
                 return;
@@ -417,9 +503,10 @@ class CoinBot {
                     delete result.items;
                 this.conId("Новая скорость: " + formatScore(result.tick, true) + " коинов / тик.");
             } catch (e) {
-                this.conId(e.message == "NOT_ENOUGH_COINS" ? NOT_ENOUGH_COINS : e.message, true)
+                this.conBuyError(e);
             }
         }
+        this.endTransaction();
     }
     
     setABItems(items) {
@@ -443,6 +530,15 @@ class CoinBot {
         this.autoBuy = false;
         this.conId("Умная покупка: " + (this.smartBuy ? "Включена" : "Отключена"));
         this.conId("Автопокупка: Отключена");
+    }
+
+    setPSB(p) {
+        if (!isNaN(p)) {
+            this.percentForSB = p;
+            this.conId("Процент коинов для умной покупки: " + this.percentForSB + "%");
+        } else {
+            this.conId("Некорректное значение!", true);
+        }
     }
     
     setLimit(lim){
@@ -470,17 +566,18 @@ class CoinBot {
         this.conId("Количество коинов для автоматического перевода " + this.transferCoins + "");
     }
     
-    setTP(tp, log=false) {
+    setTP(tp) {
         this.transferPercent = tp;
         this.conId("Процент коинов для автоматического перевода: " + this.transferPercent + "%");
     }
     
     showPrices() {
         ccon("-- Цены --", "red");
-        ccon(this.lPrices());
+        ccon(this.lPrices(), false);
     }
     
     async transfer(id, count) {
+        if (!this.beginTransaction())                                   return;
         try {
             await this.coinWS.transferToUser(id, count);
             this.conId(TRANSFER_OK, "black", "Green");
@@ -489,6 +586,7 @@ class CoinBot {
         } catch (e) {
             this.conId(e.message == "BAD_ARGS" ? BAD_ARGS : e.message, true);
         }
+        this.endTransaction();
     }
 }
 
