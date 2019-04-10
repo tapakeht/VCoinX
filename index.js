@@ -50,14 +50,13 @@ autoupdater.on('check.up-to-date', function(v) {
     con('У вас установлена актуальная версия: ' + v, 'white', 'Green');
 });
 autoupdater.on('check.out-dated', function(v_old, v) {
-    //TODO enable
-    /*con('У вас устаревшая версия: ' + v_old, 'white', 'Red');
+    con('У вас устаревшая версия: ' + v_old, 'white', 'Red');
     if (!autoUpdate && !updateOnce) {
         con('Актуальная версия: ' + v + '. Для ее установки введите команду update', 'white', 'Red');
     } else {
         con('Актуальная версия: ' + v + '. Приступаю к обновлению...', 'white', 'Green');
         autoupdater.fire('download-update');
-    }*/
+    }
 });
 autoupdater.on('update.downloaded', function() {
     con('Обновление успешно загружено! Начинаю установку...', 'white', 'Green');
