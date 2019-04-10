@@ -111,11 +111,12 @@ class VCoinWS {
                                         window: {
                                             parseInt: parseInt,
                                             Math: Math,
+                                            webSocket: true,
                                             location: {
                                                 host: 'vk.com'
                                             },
                                             navigator: {
-                                                userAgent: 'Mozilla/5.0 (Windows; U; Win98; en-US; rv:0.9.2) Gecko/20010725 Netscape6/6.1'
+                                                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36'
                                             }
                                         }
                                     }),

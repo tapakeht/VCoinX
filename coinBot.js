@@ -15,8 +15,7 @@ const {
     formatScore,
     infLog,
     rand,
-    beep,
-    mathPrice
+    beep
 } = require('./helpers');
 
 const {
@@ -115,13 +114,13 @@ class CoinBot {
         this.missTTL = null;
         this.boosterTTL = null;
         this.lastTry = 0;
-        this.numberOfTries = 3;
+        this.numberOfTries = 5;
         this.state = State.STARTING;
         this.lastStatus = '';
         this.transactionInProcess = false;
         this.smartBuyItem = null;
         this.smartBuyPrice = 0;
-        this.smartBuyCount = 0;
+        this.SBLastTime = 0;
 
         this.miner = new Miner();
         this.coinWS = new VCoinWS();
@@ -474,44 +473,31 @@ class CoinBot {
 
     async doSmartBuy() {
         if (this.state != State.RUNNING)
-            return;
-        let ratio = 100 / this.percentForSB;
-        let count = [1000, 333, 100, 34, 10, 2, 1];
-        let prices = this.justPrices();
-        let itemName = '';
-        Object.keys(count).forEach(id => {
-            prices[id] = mathPrice(prices[id], count[id]);
-        });
+            return; 
         if (this.smartBuyItem === null){
+            let prices = this.justPrices();
+            let payback = Entit.names.map((el, i) => prices[i] / Entit.items[el].amount);
             let min = Math.min.apply(null, prices);
             let good = prices.indexOf(min);
             this.smartBuyItem = Entit.names[good];
             this.smartBuyPrice = min;
-            this.smartBuyCount = count[good];
-            this.logMisc('Умной покупкой было определено, что выгодно будет приобрести улучшение ' + Entit.titles[this.smartBuyItem] + '.', this.showBuy);
-            this.logMisc('Стоимость: ' + formatScore(min, true) + ' коинов за ' + count[good] + ' шт.', this.showBuy);
+            this.logMisc('Умной покупкой было определено, что выгодно будет приобрести улучшение ' + Entit.titles[this.smartBuyItem] + 'за' + formatScore(min, true) + 'коинов.', this.showBuy);
         }
-
-        if (Math.floor(this.miner.score * this.percentForSB / 100) > this.smartBuyPrice) {
+        let ratio = 100 / this.percentForSB;  
+        if (Math.floor(this.miner.score * this.percentForSB / 100) > this.smartBuyPrice && Math.floor(Date.now() / 1000) - this.SBLastTime > 15) {
             if (this.state != State.RUNNING || !this.beginTransaction())
                 return;
             try {
-                let cnt = this.smartBuyCount;
-                while (cnt) {
-                    try {
-                        let result = await this.coinWS.buyItemById(this.smartBuyItem);
-                        this.miner.updateStack(result.items);
-                        cnt--;
-                    } catch (e) {
-                        if (e.message != 'ANOTHER_TRANSACTION_IN_PROGRESS') {
-                            throw e;
-                        }
-                    }
-                }
+                let result = await this.coinWS.buyItemById(this.smartBuyItem);
+                this.miner.updateStack(result.items);
                 let template = 'Умной покупкой был приобретен ' + Entit.titles[this.smartBuyItem] + ' в количестве ' + this.smartBuyCount + ' шт.';
                 this.logMisc(template, this.showBuy);
+                this.smartBuyItem = null;
+                this.SBLastTime = Math.floor(Date.now() / 1000);
             } catch (e) {
-                this.conBuyError(e);
+                if (e.message != 'ANOTHER_TRANSACTION_IN_PROGRESS') {
+                    this.conBuyError(e)
+                }
             }
             this.endTransaction();
         }
