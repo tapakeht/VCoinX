@@ -127,9 +127,7 @@ class CoinBot {
         this.coinWS = new VCoinWS();
         
         this.setupWS();
-        if (this.updateLink()) {
-            this.startBooster();
-        }
+        this.updateLinkAndStart();
     }
     
     beginTransaction() {
@@ -238,68 +236,67 @@ class CoinBot {
         }
     }
 
-    updateLink() {
+    //TODO переписать в более понятный вид
+    async updateLinkAndStart() {
         if (!this.doneurl) {
-            let vk = new VK();
-            return (async _ => {
-                if (!this.vk_token) {
-                    if (this.login && this.password) {
-                        if (!(await this.getToken())) {
-                            return this.stop();
-                        }
-                    } else {
-                        this.conId(NO_TOKEN, true);
+            let vk = new VK(); 
+            if (!this.vk_token) {
+                if (this.login && this.password) {
+                    if (!(await this.getToken())) {
                         return this.stop();
                     }
+                } else {
+                    this.conId(NO_TOKEN, true);
+                    return this.stop();
                 }
-                vk.token = this.vk_token;
+            }
+            vk.token = this.vk_token;
 
-                try {
-                    let iframe_url;
-                    if (!this.groupId) {
-                        iframe_url = (await vk.api.apps.get({
-                            app_id: 6915965
-                        })).items[0].mobile_iframe_url;
-                    } else {
-                        let response = (await vk.api.call('execute.resolveScreenName', {
-                            screen_name: 'app6915965_-' + this.groupId,
-                            owner_id: '-' + this.groupId,
-                            func_v: 9
-                        })).response.embedded_uri;
-                        iframe_url = response.view_url;
-                        if (response.original_url == 'https://vk.com/coin') {
-                            throw ('Указан некорректный ID группы или группа не подключила майнинг VKCoin!');
-                        }
-                    }
-                    if (!iframe_url) {
-                        throw ('Не удалось получить ссылку на приложение.\n\t\tВозможное решение: Используйте расширенный токен.');
-                    }
-                    let id = (await vk.api.users.get())[0]['id'];
-                    if (!id) {
-                        throw ('Не удалось получить ID пользователя.');
-                    }
-                    this.user_id = id;
-                    this.URLWS = formatWSS(iframe_url, this.user_id, this.currentServer);
-                    return true;
-                } catch (error) {
-                    if (error.code == 5){
-                        this.conId(INVALID_TOKEN, true);
-                    } else if ((error.code == 'ECONNREFUSED' || error.code == 'ENOENT')) {
-                        this.conId(NO_CONN, true);
-                    } else if (error.code == 3) {
-                        this.conId(BAD_GROUP_TOKEN, true);
-
-                    } else {
-                        this.conId('API Error: ' + error, true);
-                    }
-                    if (this.login && this.password) {
-                        this.token = '';
-                        return this.updateLink();
-                    } else {
-                        return this.stop();
+            try {
+                let iframe_url;
+                if (!this.groupId) {
+                    iframe_url = (await vk.api.apps.get({
+                        app_id: 6915965
+                    })).items[0].mobile_iframe_url;
+                } else {
+                    let response = (await vk.api.call('execute.resolveScreenName', {
+                        screen_name: 'app6915965_-' + this.groupId,
+                        owner_id: '-' + this.groupId,
+                        func_v: 9
+                    })).response.embedded_uri;
+                    iframe_url = response.view_url;
+                    if (response.original_url == 'https://vk.com/coin') {
+                        throw ('Указан некорректный ID группы или группа не подключила майнинг VKCoin!');
                     }
                 }
-            })();
+                if (!iframe_url) {
+                    throw ('Не удалось получить ссылку на приложение.\n\t\tВозможное решение: Используйте расширенный токен.');
+                }
+                let id = (await vk.api.users.get())[0]['id'];
+                if (!id) {
+                    throw ('Не удалось получить ID пользователя.');
+                }
+                this.user_id = id;
+                this.URLWS = formatWSS(iframe_url, this.user_id, this.currentServer);
+                this.startBooster();
+            } catch (error) {
+                if (error.code == 5){
+                    this.conId(INVALID_TOKEN, true);
+                } else if ((error.code == 'ECONNREFUSED' || error.code == 'ENOENT')) {
+                    this.conId(NO_CONN, true);
+                } else if (error.code == 3) {
+                    this.conId(BAD_GROUP_TOKEN, true);
+
+                } else {
+                    this.conId('API Error: ' + error, true);
+                }
+                if (this.login && this.password) {
+                    this.token = '';
+                    this.updateLinkAndStart();
+                } else {
+                    this.stop();
+                }
+            }
         } else {
             let gsearch = url.parse(this.doneurl, true);
             if (!gsearch.query || !gsearch.query.vk_user_id) {
@@ -307,17 +304,17 @@ class CoinBot {
                     this.conId(URL_NO_VK_ID, true);
                     this.conId(USING_TOKEN);
                     this.doneurl = '';
-                    return this.updateLink();
+                    this.updateLinkAndStart();
                 } else {
                     this.conId(URL_NO_VK_ID, true);
                     this.stop();
-                    return false;
                 }
-            }
-            this.user_id = parseInt(gsearch.query.vk_user_id);
+            } else {
+                this.user_id = parseInt(gsearch.query.vk_user_id);
     
-            this.URLWS = formatWSS(this.doneurl, this.user_id, this.currentServer);
-            return true;
+                this.URLWS = formatWSS(this.doneurl, this.user_id, this.currentServer);
+                this.startBooster();
+            }
         }
     }
     
@@ -528,9 +525,7 @@ class CoinBot {
             this.lastTry = 0;
             this.currentServer = (this.currentServer + 1) % TOTAL_SERVERS;
             this.conId(SWITCH_SRV, true);
-            if (this.updateLink()) {
-                this.startBooster(t);
-            }
+            this.updateLinkAndStart();
         } else {
             this.forceRestart(t);
         }
