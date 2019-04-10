@@ -144,12 +144,6 @@ function removeLetters(e) {
     return parseInt(e.replace(/\D+/g, ''));
 }
 
-function mathPrice(price, count) {
-    if (count >= 100)
-        return Infinity; //1e11, невозможно купить
-    return count <= 1 ? price : Math.ceil(1.3 * mathPrice(price, count - 1)) + price;
-}
-
 module.exports = {
     rl,
     con,
@@ -166,6 +160,5 @@ module.exports = {
     setTerminalTitle,
     infLog,
     rand,
-    beep,
-    mathPrice
+    beep
 }

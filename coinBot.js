@@ -43,31 +43,26 @@ const NO_TOKEN = 'Бот остановлен (отсутствует токен
     TOKEN_GET_FAILED = 'Не удалось получить токен пользователя с помощью логина и пароля! Попробуйте указать токен вручную.',
     BAD_GROUP_TOKEN = 'Указанный токен не подходит для майнинга на группу. Укажите расширенный токен или используйте автоматическое получение токена по логину и паролю, как указано в данном руководстве -> github.com/cursedseal/VCoinX';
 
-const TOTAL_SERVERS = 4
-;
+const SERVERS = [
+    //'bagosi-go-go.vkforms.ru',
+    'coin.w5.vkforms.ru',
+    'coin-without-bugs.vkforms.ru'
+];
+
 function getDefault(val, def) {
      if (val !== undefined)
         return val;
     return def;
 }
 
-function formatWSS(link, user_id, server) {
+function formatWSS(link, user_id, server_id) {
     let gsearch = url.parse(link),
         naddrWS = gsearch.protocol.replace('https:', 'wss:').replace('http:', 'ws:') + '//' + gsearch.host + '/channel/',
         channel = user_id % 32;
 
     let URLWS = naddrWS + channel + '/' + gsearch.search + '&ver=1&pass='.concat(Entit.hashPassCoin(user_id, 0));
     let srv = /([\w-]+\.)*vkforms\.ru/;
-    switch (server) {
-        case 1:
-            return URLWS.replace(srv, 'bagosi-go-go.vkforms.ru');
-        case 2:
-            return URLWS.replace(srv, 'coin.w5.vkforms.ru');
-        case 3:
-            return URLWS.replace(srv, (channel > 7) ? 'bagosi-go-go.vkforms.ru' : 'coin.w5.vkforms.ru');
-        default:
-            return URLWS.replace(srv, 'coin-without-bugs.vkforms.ru');
-    }
+    return URLWS.replace(srv, SERVERS[server_id]);
 }
 
 let State = {
@@ -509,7 +504,7 @@ class CoinBot {
         this.lastTry++;
         if (this.lastTry >= this.numberOfTries) {
             this.lastTry = 0;
-            this.currentServer = (this.currentServer + 1) % TOTAL_SERVERS;
+            this.currentServer = (this.currentServer + 1) % SERVERS.length;
             this.conId(SWITCH_SRV, true);
             this.updateLinkAndStart();
         } else {
