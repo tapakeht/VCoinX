@@ -25,9 +25,12 @@ class VCoinWS {
         this.onConnectSend = [];
         this.tickCount = 0;
         this.wsServer = "";
+        this.group_id = null;
+        this.groupInfo = [];
+        this.groupData = [];
     }
 
-    run(wsServer, cb) {
+    run(wsServer, group_id, cb) {
         this.wsServer = wsServer || this.wsServer;
         this.selfClose();
 
@@ -36,6 +39,8 @@ class VCoinWS {
         }
 
         try {
+            if (group_id)
+                this.group_id = group_id;
             this.ws = new WebSocket(this.wsServer);
             this.ws.onopen = _ => {
                 this.connected = true;
@@ -49,13 +54,17 @@ class VCoinWS {
                     if (this.callbackForPackId.hasOwnProperty(pid) && this.ws) {
                         this.ws.send(this.callbackForPackId[pid].str)
                         clearTimeout(this.callbackForPackId[pid].ttl)
-                        this.callbackForPackId[pid].ttl = setTimeout(function() {
+                        this.callbackForPackId[pid].ttl = setTimeout(_ => {
                             this.callbackForPackId[pid].reject(new Error("TIMEOUT"))
+
                             this.dropCallback(pid)
                         }, 1e4)
                     }
                 };
                 this.onOpen();
+                if (this.group_id) {
+                    this.loadGroup(this.group_id);
+                }
             };
 
             this.ws.onerror = e => {
@@ -94,11 +103,14 @@ class VCoinWS {
                         this.confirmScore = score;
                         this.oldScore = score;
                         this.oldPlace = place;
+                        this.groupInfo = data.top.groupInfo;
 
                         if (pow) {
                             try {
                                 let x = safeEval(pow, {
                                         window: {
+                                            parseInt: parseInt,
+                                            Math: Math,
                                             location: {
                                                 host: 'vk.com'
                                             },
@@ -246,6 +258,9 @@ class VCoinWS {
     }
     onUserLoaded(e) {
         this.onUserLoadedCallback = e
+    }
+    onGroupLoaded(e) {
+        this.onGroupLoadedCallback = e
     }
     onReceiveDataEvent(e) {
         this.onMyDataCallback = e
@@ -400,6 +415,14 @@ class VCoinWS {
         res = parseInt(res, 10);
         this.oldPlace = res;
         return res;
+    }
+
+    async loadGroup(e) {
+        let res = await this.sendPackMethod(["G", e]);
+        this.groupData = JSON.parse(res);
+        if (!this.groupData)
+            return;
+        this.onGroupLoadedCallback && this.onGroupLoadedCallback(this.groupInfo, this.groupData);
     }
 
     async getUserScores(e) {
