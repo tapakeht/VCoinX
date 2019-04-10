@@ -103,11 +103,17 @@ autoupdater.on('error', function(name, e) {
 autoupdater.fire('check');
 
 let globalToken = '';
-let bots = BOTS.map((cfg, i) => {
-    let bot = new CoinBot(cfg, i + 1);
+let bots = []
+
+function init(i) {
+    if (i == BOTS.length)
+        return;
+    let bot = new CoinBot(BOTS[i], i + 1);
     globalToken = globalToken || bot.vk_token;
-    return bot;
-});
+    bots.push(bot);
+    setTimeout(_ => init(i + 1), 500);
+}
+init(0);
 
 let vk = new VK();
 vk.token = globalToken;
