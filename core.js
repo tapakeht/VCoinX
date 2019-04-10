@@ -24,7 +24,7 @@ class VCoinWS {
         this.connecting = false;
         this.onConnectSend = [];
         this.tickCount = 0;
-        this.wsServer = "";
+        this.wsServer = '';
         this.group_id = null;
         this.groupInfo = [];
         this.groupData = [];
@@ -55,7 +55,7 @@ class VCoinWS {
                         this.ws.send(this.callbackForPackId[pid].str)
                         clearTimeout(this.callbackForPackId[pid].ttl)
                         this.callbackForPackId[pid].ttl = setTimeout(_ => {
-                            this.callbackForPackId[pid].reject(new Error("TIMEOUT"))
+                            this.callbackForPackId[pid].reject(new Error('TIMEOUT'))
 
                             this.dropCallback(pid)
                         }, 1e4)
@@ -68,7 +68,7 @@ class VCoinWS {
             };
 
             this.ws.onerror = e => {
-                console.error("На стороне сервера возникла ошибка: " + e.message);
+                console.error('На стороне сервера возникла ошибка: ' + e.message);
                 this.retryTime = 1e3;
                 this.reconnect(wsServer, true);
             }
@@ -86,9 +86,9 @@ class VCoinWS {
 
             this.ws.onmessage = ({ data }) => {
                 let t = data;
-                if ("{" === t[0]) {
+                if ('{' === t[0]) {
                     let data = JSON.parse(t);
-                    if ("INIT" === data.type) {
+                    if ('INIT' === data.type) {
                         let score = data.score,
                             place = data.place,
                             randomId = data.randomId,
@@ -119,7 +119,7 @@ class VCoinWS {
                                             }
                                         }
                                     }),
-                                    str = "C1 ".concat(this.randomId, " ") + x;
+                                    str = 'C1 '.concat(this.randomId, ' ') + x;
                                 if (this.connected) this.ws.send(str);
                                 else this.onConnectSend.push(str);
                             } catch (e) {
@@ -134,45 +134,45 @@ class VCoinWS {
                         }, 1e3);
                         this.ccp = ccp || this.ccp;
                     }
-                } else if (-1 === t.indexOf("SELF_DATA") &&
-                    -1 === t.indexOf("WAIT_FOR_LOAD") &&
-                    -1 === t.indexOf("MISS") &&
-                    -1 === t.indexOf("TR") &&
-                    -1 === t.indexOf("BROKEN") &&
-                    -1 === t.indexOf("ALREADY_CONNECTED") &&
-                    "C" !== t[0] && "R" !== t[0]) {
-                    console.log("on Message:\n", t);
+                } else if (-1 === t.indexOf('SELF_DATA') &&
+                    -1 === t.indexOf('WAIT_FOR_LOAD') &&
+                    -1 === t.indexOf('MISS') &&
+                    -1 === t.indexOf('TR') &&
+                    -1 === t.indexOf('BROKEN') &&
+                    -1 === t.indexOf('ALREADY_CONNECTED') &&
+                    'C' !== t[0] && 'R' !== t[0]) {
+                    console.log('on Message:\n', t);
                 }
-                if ("R" === t[0]) {
-                    let p = t.replace("R", "").split(" "),
+                if ('R' === t[0]) {
+                    let p = t.replace('R', '').split(' '),
                         d = p.shift();
 
-                    this.rejectAndDropCallback(d, new Error(p.join(" ")))
+                    this.rejectAndDropCallback(d, new Error(p.join(' ')))
                 }
-                if ("C" === t[0]) {
-                    let h = t.replace("C", "").split(" "),
+                if ('C' === t[0]) {
+                    let h = t.replace('C', '').split(' '),
                         y = h.shift();
 
-                    this.resoveAndDropCallback(y, h.join(" "));
+                    this.resoveAndDropCallback(y, h.join(' '));
                 }
-                if ("ALREADY_CONNECTED" === t) {
+                if ('ALREADY_CONNECTED' === t) {
                     this.retryTime = 18e5;
                     if (this.onAlredyConnectedCallback)
                         this.onAlredyConnectedCallback();
                 } else {
-                    if (0 === t.indexOf("WAIT_FOR_LOAD")) {
+                    if (0 === t.indexOf('WAIT_FOR_LOAD')) {
                         if (this.onWaitLoadCallback)
-                            this.onWaitLoadCallback(parseInt(t.replace("WAIT_FOR_LOAD ", ""), 10));
+                            this.onWaitLoadCallback(parseInt(t.replace('WAIT_FOR_LOAD ', ''), 10));
                         if (this.onChangeOnlineCallback)
-                            this.onChangeOnlineCallback(parseInt(t.replace("WAIT_FOR_LOAD ", ""), 10));
-                        if (0 === t.indexOf("MSG")) {
+                            this.onChangeOnlineCallback(parseInt(t.replace('WAIT_FOR_LOAD ', ''), 10));
+                        if (0 === t.indexOf('MSG')) {
                             this.retryTime = 3e5;
                             if (this.onMessageEventCallback)
-                                this.onMessageEventCallback(t.replace("MSG ", ""));
+                                this.onMessageEventCallback(t.replace('MSG ', ''));
                         }
                     }
-                    if (0 === t.indexOf("SELF_DATA")) {
-                        let data = t.replace("SELF_DATA ", "").split(" ");
+                    if (0 === t.indexOf('SELF_DATA')) {
+                        let data = t.replace('SELF_DATA ', '').split(' ');
                         this.randomId = data[2];
                         let packId = parseInt(data[3], 10),
                             online = parseInt(data[4], 10),
@@ -189,17 +189,17 @@ class VCoinWS {
                     }
                 }
 
-                if ("BROKEN" === t && this.onBrokenEventCallback) {
+                if ('BROKEN' === t && this.onBrokenEventCallback) {
                     this.retryTime = 6e4;
                     this.onBrokenEventCallback();
                 } else {
-                    if (0 === t.indexOf("MISS")) {
-                        this.randomId = parseInt(t.replace("MISS ", ""), 10);
+                    if (0 === t.indexOf('MISS')) {
+                        this.randomId = parseInt(t.replace('MISS ', ''), 10);
                         if (this.onMissClickCallback)
                             this.onMissClickCallback(this.randomId);
                     }
-                    if (0 === t.indexOf("TR")) {
-                        let data = t.replace("TR ", "").split(" ");
+                    if (0 === t.indexOf('TR')) {
+                        let data = t.replace('TR ', '').split(' ');
                         let nscore = parseInt(data[0], 10),
                             from = parseInt(data[1]);
                         this.oldScore += nscore;
@@ -333,9 +333,9 @@ class VCoinWS {
     sendPack(e, t) {
         return new Promise((resolve, reject) => {
             try {
-                let i = "C"
-                    .concat(e, " ")
-                    .concat(this.randomId, " 1");
+                let i = 'C'
+                    .concat(e, ' ')
+                    .concat(this.randomId, ' 1');
 
                 if (this.connected) this.ws.send(i);
                 else this.onConnectSend.push(i);
@@ -376,7 +376,7 @@ class VCoinWS {
 
     async buyItemById(id) {
         let res;
-        res = await this.sendPackMethod(["B", id]);
+        res = await this.sendPackMethod(['B', id]);
         res = JSON.parse(res);
 
         let n = res.tick,
@@ -396,7 +396,7 @@ class VCoinWS {
     async transferToUser(id, sum = 3e4) {
         sum = Math.round(parseInt(sum) * 1e3);
 
-        let res = await this.sendPackMethod(["T", id, sum]);
+        let res = await this.sendPackMethod(['T', id, sum]);
         res = JSON.parse(res);
         let t = res.score,
             a = res.place,
@@ -411,14 +411,14 @@ class VCoinWS {
     }
 
     async getMyPlace() {
-        let res = await this.sendPackMethod(["X"]);
+        let res = await this.sendPackMethod(['X']);
         res = parseInt(res, 10);
         this.oldPlace = res;
         return res;
     }
 
     async loadGroup(e) {
-        let res = await this.sendPackMethod(["G", e]);
+        let res = await this.sendPackMethod(['G', e]);
         this.groupData = JSON.parse(res);
         if (!this.groupData)
             return;
@@ -426,7 +426,7 @@ class VCoinWS {
     }
 
     async getUserScores(e) {
-        let res = await this.sendPackMethod(["GU"].concat(e));
+        let res = await this.sendPackMethod(['GU'].concat(e));
         return JSON.parse(res);
     }
 
@@ -437,7 +437,7 @@ class VCoinWS {
         return new Promise(function(n, r) {
                 let o = ++t.sendedPacks;
                 try {
-                    let i = "P" + o + " " + e.join(" ");
+                    let i = 'P' + o + ' ' + e.join(' ');
                     if (t.connected)
                         t.ws.send(i);
                     else
@@ -450,7 +450,7 @@ class VCoinWS {
                 }
             })
             .catch(function(r) {
-                if (r && "TIMEOUT" === r.message && n < 3)
+                if (r && 'TIMEOUT' === r.message && n < 3)
                     return t.sendPackMethod(e, n + 1);
                 throw r;
             });
@@ -462,7 +462,7 @@ class VCoinWS {
             resolve: t,
             reject: n,
             ttl: setTimeout(_ => {
-                n(new Error("TIMEOUT"));
+                n(new Error('TIMEOUT'));
                 this.dropCallback(e);
             }, 1e4 + Math.round(500 * Math.random()))
         }
@@ -509,7 +509,7 @@ class Miner {
     }
 
     updateStack(items) {
-        this.stack = Entit.generateStack(items.filter(e => ("bonus" !== e && "vkp1" !== e && "vkp2" !== e && "music" !== e)));
+        this.stack = Entit.generateStack(items.filter(e => ('bonus' !== e && 'vkp1' !== e && 'vkp2' !== e && 'music' !== e)));
         let total = 0;
         this.stack.forEach(function(e) {
             let n = e.value,
@@ -523,13 +523,13 @@ class Miner {
 class EntitiesClass {
     constructor() {
         this.titles = {
-            cursor: "Курсор",
-            cpu: "Видеокарта",
-            cpu_stack: "Стойка видеокарт",
-            computer: "Суперкомпьютер",
-            server_vk: "Сервер ВКонтакте",
-            quantum_pc: "Квантовый компьютер",
-            datacenter: "Датацентр",
+            cursor: 'Курсор',
+            cpu: 'Видеокарта',
+            cpu_stack: 'Стойка видеокарт',
+            computer: 'Суперкомпьютер',
+            server_vk: 'Сервер ВКонтакте',
+            quantum_pc: 'Квантовый компьютер',
+            datacenter: 'Датацентр',
         };
         this.items = {
             cursor: {
@@ -574,16 +574,16 @@ class EntitiesClass {
             }
         };
         this.names = [
-			"cursor",
-			"cpu",
-			"cpu_stack",
-			"computer",
-			"server_vk",
-			"quantum_pc",
-			"datacenter",
-			// "vkp1",
-			// "vkp2",
-		];
+            'cursor',
+            'cpu',
+            'cpu_stack',
+            'computer',
+            'server_vk',
+            'quantum_pc',
+            'datacenter',
+            // 'vkp1',
+            // 'vkp2',
+        ];
     }
 
     generateStack(e) {

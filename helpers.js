@@ -25,16 +25,16 @@ function formatScore(e) {
         function(e, t, n, a) {
             var r, o, c, s, i;
 
-            r = parseInt(e = (+e || 0).toFixed(t), 10) + "";
+            r = parseInt(e = (+e || 0).toFixed(t), 10) + '';
             (o = r.length) > 3 ? o %= 3 : o = 0;
 
-            i = o ? (r.substr(0, o) + a) : "";
-            c = r.substr(o).replace(/(\d{3})(?=\d)/g, "$1" + a);
-            s = t ? n + Math.abs(e - r).toFixed(t).replace(/-/, 0).slice(2) : "";
+            i = o ? (r.substr(0, o) + a) : '';
+            c = r.substr(o).replace(/(\d{3})(?=\d)/g, '$1' + a);
+            s = t ? n + Math.abs(e - r).toFixed(t).replace(/-/, 0).slice(2) : '';
 
             return i + c + s;
-        }(e / 1e3, 3, ",", " ") :
-        (e / 1e3).toFixed(3).toString().replace(".", ",")
+        }(e / 1e3, 3, ',', ' ') :
+        (e / 1e3).toFixed(3).toString().replace('.', ',')
 }
 
 colors.setTheme({
@@ -48,24 +48,24 @@ colors.setTheme({
 
 function con(message, color, colorBG) {
     if (message === undefined)
-        return console.log("\n");
-    let temp = (!offColors ? colors.dateBG('[' + dateF() + ']') : dateF()) + ": " + ccon(message, color, colorBG, 1);
+        return console.log('\n');
+    let temp = (!offColors ? colors.dateBG('[' + dateF() + ']') : dateF()) + ': ' + ccon(message, color, colorBG, 1);
     console.log(temp);
 }
 
 function ccon(message, color, colorBG, ret) {
-    let temp = "";
+    let temp = '';
     if (message === undefined) {
-        console.log("\n")
+        console.log('\n')
         return;
     }
     if (color === true) {
-        color = "white";
-        colorBG = "Red";
-        temp = !offColors ? colors.yellow.bgRed("[ОШИБКА]: ") : "[ОШИБКА]: ";
+        color = 'white';
+        colorBG = 'Red';
+        temp = !offColors ? colors.yellow.bgRed('[ОШИБКА]: ') : '[ОШИБКА]: ';
     }
-    colorBG = "bg" + ((typeof colorBG == "string") ? colorBG : "Black");
-    color = (typeof color == "string") ? color : "green";
+    colorBG = 'bg' + ((typeof colorBG == 'string') ? colorBG : 'Black');
+    color = (typeof color == 'string') ? color : 'green';
     temp += (!offColors || color === false) ? colors[colorBG](colors[color](message)) : message;
     !ret && console.log(temp);
     return temp;
@@ -98,13 +98,13 @@ function rand(min, max) {
     return Math.floor(min + Math.random() * (max + 1 - min));
 }
 
-let cFile = "./log.txt";
+let cFile = './log.txt';
 async function infLog(data) {
-    data = "\n[" + dateF() + "] \t" + data;
+    data = '\n[' + dateF() + '] \t' + data;
 
     let exists = await existsAsync(cFile);
     if (!exists) {
-        let errWrite = await writeFileAsync(cFile, "Log." + data);
+        let errWrite = await writeFileAsync(cFile, 'Log.' + data);
         if (errWrite) throw errWrite;
     } else
         await appendFileAsync(cFile, data);
@@ -115,7 +115,7 @@ function existsFile(f) {
 }
 
 function existsAsync(path) {
-    return new Promise(resolve => fs.exists(path, exists => resolve(exists)));
+    return new Promise(resolve => fs.existsSync(path, exists => resolve(exists)));
 }
 
 function writeFileAsync(path, data) {
@@ -132,7 +132,7 @@ function getVersion() {
 
 function setTerminalTitle(title) {
     process.stdout.write(
-        String.fromCharCode(27) + "]0;" + title + String.fromCharCode(7)
+        String.fromCharCode(27) + ']0;' + title + String.fromCharCode(7)
     );
 }
 
@@ -141,7 +141,7 @@ function beep() {
 }
 
 function removeLetters(e) {
-    return parseInt(e.replace(/\D+/g, ""));
+    return parseInt(e.replace(/\D+/g, ''));
 }
 
 function mathPrice(price, count) {

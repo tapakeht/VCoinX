@@ -1,10 +1,10 @@
 module.exports = {
-	BOTS: [
-	    {
-            //LOGIN: "",
-            //PASSWORD: "",
-            TOKEN: "token_here",
-            //DONEURL: "https://coin.vkforms.ru/index.html/0...",
+    BOTS: [
+        {
+            //LOGIN: '',
+            //PASSWORD: '',
+            TOKEN: 'token_here',
+            //DONEURL: 'https://coin.vkforms.ru/index.html/0...',
             GROUP_ID: 77777, //группа для майнинга
             //TI: 1800, //интервал автоперевода
             //TSUM: 10000, //сумма автоперевода
@@ -12,8 +12,8 @@ module.exports = {
             //TO: 123456, //ID для автоперевода
             AUTOBUY: true, 
             AUTOBUYITEMS: [
-                "quantum_pc", //предметы для автопокупки
-                "datacenter"
+                'quantum_pc', //предметы для автопокупки
+                'datacenter'
             ],
             //SMARTBUY: true,
             //PSB: 50, //процент коинов, выделяемых для умной покупки
@@ -24,8 +24,8 @@ module.exports = {
             SHOW_BUY: true //показывать сообщения об автопокупке / умной покупке
         },
         {
-            LOGIN: "+79123456789",
-            PASSWORD: "qwerty", 
+            LOGIN: '+79123456789',
+            PASSWORD: 'qwerty', 
             GROUP_ID: 1357, 
             TPERC: 75, //автоперевод в процентах
             TO: 654321, //ID для автоперевода

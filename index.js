@@ -6,8 +6,8 @@ const url = require('url'),
     } = require('vk-io');
 
 const {
-	CoinBot,
-	State
+    CoinBot,
+    State
 } = require('./coinBot');
 
 const {
@@ -127,8 +127,8 @@ async function getUserId(user){
 let selBot = -1;
 
 let showStatus = setInterval(_ => {
-	let totalCoins = 0,
-	    totalSpeed = 0,
+    let totalCoins = 0,
+        totalSpeed = 0,
         running = 0;
     for (let i = 0; i < bots.length; i++) {
         if (bots[i].state == State.RUNNING){
@@ -147,7 +147,7 @@ let showStatus = setInterval(_ => {
 
 rl.on('line', async (line) => {
     let id;
-	switch (line.trim().toLowerCase()) {
+    switch (line.trim().toLowerCase()) {
         case '':
             break;
             
@@ -158,11 +158,11 @@ rl.on('line', async (line) => {
             ccon('sel(ect) - выбрать бота.');
             ccon('info - отображение основной информации.');
             ccon('debug - отображение тестовой информации.');
-            ccon('stop(pause)	- остановка майнера.');
-            ccon('start(run)	- запуск майнера.');
-            ccon('(b)uy	- покупка улучшений.');
+            ccon('stop(pause)    - остановка майнера.');
+            ccon('start(run)    - запуск майнера.');
+            ccon('(b)uy    - покупка улучшений.');
             ccon('(p)rice - отображение цен на товары.');
-            ccon('tran(sfer) / pay	- перевод игроку.');
+            ccon('tran(sfer) / pay    - перевод игроку.');
             ccon('autoupd(ate) - включить/выключить автообновление.');
             ccon('upd(ate) - обновить бота');
             ccon('getscore(gs) - узнать количество коинов у другого пользователя.');
@@ -243,7 +243,7 @@ rl.on('line', async (line) => {
             }
             break;
     }
-	
+    
     if (selBot != -1) {
         let temp, item;
         
@@ -385,7 +385,7 @@ for (var argn = 2; argn < process.argv.length; argn++) {
         case '-help':
             {
                 ccon('-- VCoinX arguments --', 'red');
-                ccon('-help			- помощь.');
+                ccon('-help            - помощь.');
                 ccon('-black      - отключить цвета консоли.');
                 ccon('-noupdates  - отключить сообщение об обновлениях.');
                 process.exit();
