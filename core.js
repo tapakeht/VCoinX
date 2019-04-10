@@ -584,6 +584,7 @@ class EntitiesClass {
             'datacenter',
             // 'vkp1',
             // 'vkp2',
+            // 'music'
         ];
     }
 

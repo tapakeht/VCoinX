@@ -472,11 +472,11 @@ class CoinBot {
         if (this.smartBuyItem === null){
             let prices = this.justPrices();
             let payback = Entit.names.map((el, i) => prices[i] / Entit.items[el].amount);
-            let min = Math.min.apply(null, prices);
-            let good = prices.indexOf(min);
+            let min = Math.min.apply(null, payback);
+            let good = payback.indexOf(min);
             this.smartBuyItem = Entit.names[good];
-            this.smartBuyPrice = min;
-            this.logMisc('Умной покупкой было определено, что выгодно будет приобрести улучшение ' + Entit.titles[this.smartBuyItem] + 'за' + formatScore(min, true) + 'коинов.', this.showBuy);
+            this.smartBuyPrice = prices[good];
+            this.logMisc('Умной покупкой было определено, что выгодно будет приобрести улучшение ' + Entit.titles[this.smartBuyItem] + ' за ' + formatScore(this.smartBuyPrice, true) + 'коинов.', this.showBuy);
         }
         let ratio = 100 / this.percentForSB;  
         if (Math.floor(this.miner.score * this.percentForSB / 100) > this.smartBuyPrice && Math.floor(Date.now() / 1000) - this.SBLastTime > 15) {
@@ -485,7 +485,7 @@ class CoinBot {
             try {
                 let result = await this.coinWS.buyItemById(this.smartBuyItem);
                 this.miner.updateStack(result.items);
-                let template = 'Умной покупкой был приобретен ' + Entit.titles[this.smartBuyItem] + ' в количестве ' + this.smartBuyCount + ' шт.';
+                let template = 'Умной покупкой был приобретен ' + Entit.titles[this.smartBuyItem];
                 this.logMisc(template, this.showBuy);
                 this.smartBuyItem = null;
                 this.SBLastTime = Math.floor(Date.now() / 1000);
