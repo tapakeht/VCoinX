@@ -406,7 +406,7 @@ class CoinBot {
         });
 
         this.coinWS.onGroupLoaded((groupInfo, groupData) => {
-            if (groupData.name && groupInfo.place !== undefined && groupInfo.score !== undefined) {
+            if (groupData && groupInfo && groupData.name && groupInfo.place !== undefined && groupInfo.score !== undefined) {
                 this.conId('Загружена информация о группе ' + groupData.name + '. Позиция в топе: ' + groupInfo.place + ', количество коинов группы: ' + formatScore(groupInfo.score, true));
             } else {
                 this.conId('Не удалось загрузить информацию о группе, проверьте ID группы', true);
